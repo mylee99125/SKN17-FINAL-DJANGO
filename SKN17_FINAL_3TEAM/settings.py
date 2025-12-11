@@ -13,7 +13,7 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False   # 배포 시엔 반드시 False
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "54.116.12.113"]
 
 INSTALLED_APPS = [
@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    "storages",
     'chatbot',
     'payments',
     'users',
@@ -132,8 +133,8 @@ if not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # --- S3 Uploads (영상 저장소) ---
-# USE_S3_UPLOADS = True  # S3 사용 여부 (로컬만 쓸 땐 False)
-USE_S3_UPLOADS = False  # S3 사용 여부 (로컬만 쓸 땐 False)
+USE_S3_UPLOADS = True  # S3 사용 여부 (로컬만 쓸 땐 False)
+# USE_S3_UPLOADS = False  # S3 사용 여부 (로컬만 쓸 땐 False)
 
 AWS_REGION = os.getenv("AWS_REGION", "ap-northeast-2")
 AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET", "")
@@ -168,5 +169,3 @@ LOGGING = {
         },
     },
 }
-
-BASE_URL = os.environ.get('BASE_URL', 'http://127.0.0.1:8000')
