@@ -1,0 +1,1071 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BAIS - Baseball AI Select</title>
+    <link rel="icon" href="{% static 'images/logo.png' %}" type="image/x-icon"> 
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+
+<body class="landing-body">
+
+    <header id="main-header" class="intro-header">
+        <div>
+            <a href="/"><img src="{% static 'images/BAIS.png' %}" alt="BAIS"></a>
+        </div> 
+        <div class="auth-buttons">
+            <button class="auth-btn" onclick="openModal('loginModal')">LOGIN</button>
+            <button class="auth-btn" onclick="openModal('termsModal')">SIGN UP</button>
+        </div>
+    </header>
+
+    <div class="bg-overlay"></div>
+    <div class="scrolling-background" id="scrolling-bg">
+        <div class="track">
+            <img src="/static/images/kbo_postseason.svg" alt="Postseason">
+            <img src="/static/images/premier12.svg" alt="Premier12">
+            <img src="/static/images/kbaseball.jpg" alt="kbaseball">
+            <img src="/static/images/wbc.jpg" alt="wbc">
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="intro-text" class="title-text">
+            <span id="typing-target"></span><span class="cursor"></span>
+        </div>
+        <div id="final-logo">
+            <img src="/static/images/BAIS.png" alt="BAIS Logo">
+        </div>
+        <div id="service-intro">
+            <h1>BEYOND BIAS, WITHIN REACH</h1>
+            <p>
+                편파없는 시선, 막힘 없는 이해.<br>
+                어디서도 본 적 없는 깊이 있는 해설이 시작됩니다.
+            </p>
+        </div>
+    </div>
+
+    <!-- 회원가입 -->
+    <div id="termsModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('termsModal')">&times;</span>
+            <h2 class="modal-title" style="margin-bottom: 20px;">BAIS에 오신 것을 환영합니다.</h2>
+            <p style="color: #333; font-size: 0.95rem; line-height: 1.6; margin-bottom: 30px;">
+                계정 만들기를 클릭하면 
+                <span class="text-link" onclick="openDocViewer('terms.txt', '서비스 이용 약관')">서비스 이용 약관</span>에 동의하고<br>
+                <span class="text-link" onclick="openDocViewer('privacy.txt', '개인정보 보호정책')">개인정보 보호정책</span>을 인정하는 것으로 간주됩니다.
+            </p>
+            <button class="modal-confirm-btn" onclick="switchModal('termsModal', 'signupModal')">계정 만들기</button>
+        </div>
+    </div>
+
+    <div id="docModal" class="modal-overlay">
+        <div class="modal-content" style="width: 600px; max-width: 90%; height: 70vh; display: flex; flex-direction: column;">
+            <span class="close-btn" onclick="closeModal('docModal')" style="z-index: 10;">&times;</span>
+            <h2 id="docTitle" class="modal-title" style="margin-bottom: 15px; flex-shrink: 0;">약관 상세</h2>
+            <div id="docContent" class="doc-scroll-box">
+                로딩 중...
+            </div>
+        </div>
+    </div>
+
+    <div id="signupModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('signupModal')">&times;</span>
+            <h2 class="modal-title">이메일 인증</h2>
+            <div class="input-group" style="position: relative;">
+                 <label>이메일 주소 입력</label>
+                 <input type="text" id="emailInput" placeholder="example@email.com" autocomplete="off" oninput="resetErrorState('emailInput', 'emailErrorMsg', 'sendBtn')">
+                 <ul id="suggestionList" class="suggestion-list"></ul>
+                 <p id="emailErrorMsg" class="error-message"></p>
+            </div>
+
+            <div id="verificationSection" class="input-group" style="display: none; margin-top: 20px; margin-bottom: 20px;">
+                <label>인증번호 입력</label>
+                <div class="timer-wrapper">
+                    <input type="text" id="codeInput" placeholder="" maxlength="6" oninput="resetErrorState('codeInput', 'codeErrorMsg', 'confirmBtn')">
+                    <span id="timerDisplay" class="timer-text"></span>
+                </div>
+                <div class="resend-container">
+                    <span id="resendBtn" class="resend-link" onclick="resendSignupCode()">인증 번호 재요청</span>
+                </div>
+                <p id="codeErrorMsg" class="error-message">인증번호가 일치하지 않습니다.</p>
+                <p class="info-text">인증이 완료되면 비밀번호 설정 페이지로 이동합니다.</p>
+            </div>
+
+            <div>
+                <button id="sendBtn" class="modal-confirm-btn" onclick="requestVerification()">인증코드 발송</button>
+                <button id="confirmBtn" class="modal-confirm-btn" style="display: none; background-color: #E50914;" onclick="confirmVerification()">인증번호 확인</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="passwordModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('passwordModal')">&times;</span>
+            <h2 class="modal-title">비밀번호 설정</h2>
+            <div class="input-group">
+                <label>비밀번호 입력</label>
+                <input type="password" id="pwInput" placeholder="비밀번호를 입력하세요"
+                       oninput="resetErrorState('pwInput', 'pwErrorMsg', 'pwSubmitBtn')">
+            </div>
+            <div class="input-group">
+                <label>비밀번호 재입력</label>
+                <input type="password" id="pwConfirmInput" placeholder="비밀번호를 다시 입력하세요"
+                       oninput="resetErrorState('pwConfirmInput', 'pwErrorMsg', 'pwSubmitBtn')">
+            </div>;
+            <p id="pwErrorMsg" class="error-message"></p>
+            <p class="info-text" style="margin-bottom: 20px;">비밀번호 설정이 완료되면 선호 구단 설정 페이지로 이동합니다.</p>
+            <button id="pwSubmitBtn" class="modal-confirm-btn" onclick="submitPassword()">비밀번호 확인</button>
+        </div>
+    </div>
+
+    <div id="teamModal" class="modal-overlay">
+        <div class="modal-content" style="width: 550px; max-width: 90%;">
+            <span class="close-btn" onclick="closeModal('teamModal')">&times;</span>
+
+            <h2 class="modal-title" style="margin-bottom: 25px;">선호 구단을 선택해주세요.</h2>
+            
+            <div class="team-grid">
+                <button class="team-btn" onclick="selectTeam(this, 'LG')">
+                    <img src="/static/images/teams/lg.svg" alt="LG">
+                    <span>LG 트윈스</span>
+                </button>
+                <button class="team-btn" onclick="selectTeam(this, 'HANWHA')">
+                    <img src="/static/images/teams/hanwha.svg" alt="Hanwha">
+                    <span>한화 이글스</span>
+                </button>
+                <button class="team-btn" onclick="selectTeam(this, 'SSG')">
+                    <img src="/static/images/teams/ssg.svg" alt="SSG">
+                    <span>SSG 랜더스</span>
+                </button>
+                <button class="team-btn" onclick="selectTeam(this, 'SAMSUNG')">
+                    <img src="/static/images/teams/samsung.svg" alt="Samsung">
+                    <span>삼성 라이온즈</span>
+                </button>
+                <button class="team-btn" onclick="selectTeam(this, 'NC')">
+                    <img src="/static/images/teams/nc.svg" alt="NC">
+                    <span>NC 다이노스</span>
+                </button>
+                <button class="team-btn" onclick="selectTeam(this, 'KT')">
+                    <img src="/static/images/teams/kt.svg" alt="KT">
+                    <span>KT 위즈</span>
+                </button>
+                <button class="team-btn" onclick="selectTeam(this, 'LOTTE')">
+                    <img src="/static/images/teams/lotte.svg" alt="Lotte">
+                    <span>롯데 자이언츠</span>
+                </button>
+                <button class="team-btn" onclick="selectTeam(this, 'KIA')">
+                    <img src="/static/images/teams/kia.svg" alt="KIA">
+                    <span>KIA 타이거즈</span>
+                </button>
+                <button class="team-btn" onclick="selectTeam(this, 'DOOSAN')">
+                    <img src="/static/images/teams/doosan.svg" alt="Doosan">
+                    <span>두산 베어스</span>
+                </button>
+                <button class="team-btn" onclick="selectTeam(this, 'KIWOOM')">
+                    <img src="/static/images/teams/kiwoom.svg" alt="Kiwoom">
+                    <span>키움 히어로즈</span>
+                </button>
+            </div>
+
+            <div class="team-info-text">
+                <p>선호 구단까지 선택되어야 회원가입이 완료됩니다.</p>
+                <p>페이지 이탈 시 회원가입이 완료되지 않습니다.</p>
+            </div>
+
+            <button class="modal-confirm-btn" onclick="completeSignup()">회원가입 완료</button>
+        </div>
+    </div>
+
+    <!-- 로그인 -->
+    <div id="loginModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('loginModal')">&times;</span>
+            <h2 class="modal-title">로그인</h2>
+            <div class="input-group">
+                <label>이메일</label>
+                <input type="text" id="loginEmailInput" placeholder="example@email.com" autocomplete="email"
+                       oninput="resetErrorState('loginEmailInput', 'loginErrorMsg', 'loginBtn')">
+                <ul id="loginSuggestionList" class="suggestion-list"></ul>
+            </div>
+            <div class="input-group">
+                <label>비밀번호</label>
+                <input type="password" id="loginPwInput" placeholder="비밀번호를 입력하세요" autocomplete="current-password"
+                       oninput="resetErrorState('loginPwInput', 'loginErrorMsg', 'loginBtn')">
+            </div>
+            <div class="login-footer">
+                <p id="loginErrorMsg" class="error-message" style="text-align: left; margin: 0; margin-left: 10px;"></p>
+                <span class="find-pw-link" onclick="switchModal('loginModal', 'findPwModal')">비밀번호 찾기</span>
+            </div>
+            <button id="loginBtn" class="modal-confirm-btn" onclick="login()">로그인</button>
+        </div>
+    </div>
+
+    <div id="findPwModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('findPwModal')">&times;</span>
+            <h2 class="modal-title">비밀번호 찾기</h2>
+            <div class="input-group">
+                <label>이메일 주소 입력</label>
+                <input type="text" id="findPwEmailInput" placeholder="가입시 등록한 이메일 입력" 
+                       oninput="resetErrorState('findPwEmailInput', 'findPwErrorMsg', 'findPwBtn')">
+                <ul id="findPwSuggestionList" class="suggestion-list"></ul>
+                <p id="findPwErrorMsg" class="error-message"></p>
+            </div>
+            <div id="findPwVeriSection" class="input-group" style="display: none; margin-top: 20px;">
+                <label>인증번호 입력</label>
+                <div class="timer-wrapper">
+                    <input type="text" id="findPwCodeInput" placeholder="인증번호 6자리" maxlength="6"
+                           oninput="resetErrorState('findPwCodeInput', 'findPwCodeErrorMsg', 'findPwConfirmBtn')">
+                    <span id="findPwTimerDisplay" class="timer-text"></span>
+                </div>
+                <div class="resend-container">
+                    <span id="findPwResendBtn" class="resend-link" onclick="resendResetCode()">인증 번호 재요청</span>
+                </div>
+                <p id="findPwCodeErrorMsg" class="error-message">인증번호가 일치하지 않습니다.</p>
+                <p class="info-text">• 이메일 인증 성공 후 비밀번호 설정 페이지로 이동합니다.</p>
+            </div>
+            <div style="margin-top: 25px;">
+                <button id="findPwBtn" class="modal-confirm-btn" onclick="requestPwResetCode()">인증코드 발송</button>
+                <button id="findPwConfirmBtn" class="modal-confirm-btn" style="display: none; background-color: #E50914;" onclick="confirmPwResetCode()">인증번호 확인</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="resetPwModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('resetPwModal')">&times;</span>
+            <h2 class="modal-title">비밀번호 재설정</h2>
+            <div class="input-group">
+                <label>새 비밀번호 입력</label>
+                <input type="password" id="resetPwInput" placeholder="새 비밀번호를 입력하세요"
+                       oninput="resetErrorState('resetPwInput', 'resetPwErrorMsg', 'resetPwSubmitBtn')">
+            </div>
+            <div class="input-group">
+                <label>새 비밀번호 재입력</label>
+                <input type="password" id="resetPwConfirmInput" placeholder="새 비밀번호를 다시 입력하세요"
+                       oninput="resetErrorState('resetPwConfirmInput', 'resetPwErrorMsg', 'resetPwSubmitBtn')">
+            </div>
+            <p id="resetPwErrorMsg" class="error-message"></p>
+            <button id="resetPwSubmitBtn" class="modal-confirm-btn" onclick="submitResetPassword()">비밀번호 재설정 완료</button>
+        </div>
+    </div>
+</body>
+
+<script>
+const fullText = "BASEBALL AI SELECT.";
+const typingSpeed = 100; 
+const typingTarget = document.getElementById('typing-target');
+const introText = document.getElementById('intro-text');
+const finalLogo = document.getElementById('final-logo');
+const bgArea = document.getElementById('scrolling-bg');
+const serviceIntro = document.getElementById('service-intro');
+const mainHeader = document.getElementById('main-header');
+const cursor = document.querySelector('.cursor');
+
+let charIndex = 0;
+function typeWriter() {
+    if (charIndex < fullText.length) {
+        typingTarget.textContent += fullText.charAt(charIndex);
+        charIndex++;
+        setTimeout(typeWriter, typingSpeed);
+    } else {
+        setTimeout(stepTwo_ShowLogo, 800);
+    }
+}
+
+function stepTwo_ShowLogo() {
+    cursor.style.display = 'none';
+    introText.classList.add('fade-out-blur');
+
+    setTimeout(() => {
+        finalLogo.classList.add('fade-in-focus');
+        bgArea.style.opacity = '1';
+    }, 300);
+
+    setTimeout(stepThree_ShowIntro, 3000);
+}
+
+function stepThree_ShowIntro() {
+    finalLogo.classList.remove('fade-in-focus');
+    finalLogo.classList.add('fade-out-blur');
+
+    setTimeout(() => {
+        serviceIntro.classList.add('fade-in-focus');
+        mainHeader.style.opacity = '1';
+    }, 500); 
+}
+
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if(modal) modal.style.display = 'flex';
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if(modal) modal.style.display = 'none';
+}
+
+function switchModal(closeId, openId) {
+    closeModal(closeId);
+    openModal(openId);
+}
+
+async function openDocViewer(fileName, title) {
+    const titleEl = document.getElementById('docTitle');
+    const contentEl = document.getElementById('docContent');
+    
+    titleEl.innerText = title;
+    contentEl.innerText = "로딩 중...";
+    
+    openModal('docModal');
+
+    try {
+        const response = await fetch(`/static/docs/${fileName}`);
+        
+        if (!response.ok) {
+            throw new Error("파일을 찾을 수 없습니다.");
+        }
+        
+        const text = await response.text();
+        contentEl.innerText = text;
+        
+    } catch (error) {
+        contentEl.innerText = "내용을 불러오는데 실패했습니다.\n" + error.message;
+    }
+}
+
+const emailInput = document.getElementById('emailInput');
+const suggestionList = document.getElementById('suggestionList');
+
+const commonDomains = [
+    "naver.com", 
+    "gmail.com", 
+    "daum.net", 
+];
+
+function setupAutocomplete(inputId, listId) {
+    const inputEl = document.getElementById(inputId);
+    const listEl = document.getElementById(listId);
+    
+    if (!inputEl || !listEl) return;
+
+    let currentFocus = -1;
+
+    inputEl.addEventListener('input', function() {
+        const val = this.value;
+        listEl.innerHTML = '';
+        currentFocus = -1;
+
+        if (!val || val.indexOf('@') === -1) {
+            listEl.style.display = 'none';
+            return;
+        }
+
+        const parts = val.split('@');
+        const userPart = parts[0];
+        const domainPart = parts[1];
+
+        const matched = commonDomains.filter(d => d.startsWith(domainPart));
+
+        if (matched.length > 0) {
+            matched.forEach(domain => {
+                const li = document.createElement('li');
+                li.textContent = userPart + "@" + domain;
+                li.onclick = function() {
+                    inputEl.value = userPart + "@" + domain;
+                    listEl.style.display = 'none';
+                    inputEl.classList.remove('input-error');
+                };
+                listEl.appendChild(li);
+            });
+            listEl.style.display = 'block';
+        } else {
+            listEl.style.display = 'none';
+        }
+    });
+
+    inputEl.addEventListener('keydown', function(e) {
+        const items = listEl.getElementsByTagName('li');
+        if (e.key === 'ArrowDown') {
+            currentFocus++;
+            addActive(items);
+        } else if (e.key === 'ArrowUp') {
+            currentFocus--;
+            addActive(items);
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+            if (listEl.style.display === 'block') {
+                if (currentFocus > -1) {
+                    e.preventDefault();
+                    items[currentFocus].click();
+                } else if (items.length > 0) {
+                    e.preventDefault();
+                    items[0].click();
+                }
+            }
+        }
+    });
+
+    function addActive(items) {
+        if (!items) return false;
+        removeActive(items);
+        if (currentFocus >= items.length) currentFocus = 0;
+        if (currentFocus < 0) currentFocus = items.length - 1;
+        items[currentFocus].classList.add("selected");
+        items[currentFocus].scrollIntoView({ block: "nearest" });
+    }
+
+    function removeActive(items) {
+        for (let i = 0; i < items.length; i++) {
+            items[i].classList.remove("selected");
+        }
+    }
+
+    document.addEventListener('click', function(e) {
+        if (e.target !== inputEl && e.target !== listEl) {
+            listEl.style.display = 'none';
+        }
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+let timerInterval = null;
+let isTimerRunning = false;
+
+function isValidEmailFormat(email) {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+}
+
+async function requestVerification() {
+    const emailInput = document.getElementById('emailInput');
+    const emailError = document.getElementById('emailErrorMsg');
+    const email = emailInput.value;
+
+    emailError.style.display = 'none';
+    emailInput.classList.remove('input-error');
+
+    if (!email) {
+        showError('emailErrorMsg', 'emailInput', "이메일을 입력해주세요.", 'sendBtn');
+        return;
+    }
+
+    if (!isValidEmailFormat(email)) {
+        showError('emailErrorMsg', 'emailInput', "이메일 형식이 올바르지 않습니다.", 'sendBtn');
+        return;
+    }
+
+    try {
+        const response = await fetch('/email/send-code/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ email: email })
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message); 
+        alert("인증코드가 발송되었습니다.");
+        emailInput.setAttribute('readonly', true);
+        
+        document.getElementById('verificationSection').style.display = 'block';
+        document.getElementById('sendBtn').style.display = 'none';
+        document.getElementById('confirmBtn').style.display = 'block';
+        
+        startAuthTimer(300);  
+        
+        localStorage.setItem('signupCooldownEnd', Date.now() + 60000);
+        lockSignupResendBtn(60);
+    } catch (error) {
+        showError('emailErrorMsg', 'emailInput', error.message || "오류가 발생했습니다.", 'sendBtn');
+    }
+}
+
+async function resendSignupCode() {
+    const btn = document.getElementById('resendBtn');
+    
+    const storedCooldown = localStorage.getItem('signupCooldownEnd');
+    const now = Date.now();
+
+    if (btn.classList.contains('disabled') || (storedCooldown && parseInt(storedCooldown) > now)) {
+        alert("1분이 지난 후에 재요청할 수 있습니다.");
+        
+        if (!btn.classList.contains('disabled') && storedCooldown) {
+            lockSignupResendBtn(Math.ceil((parseInt(storedCooldown) - now) / 1000));
+        }
+        return; 
+    }
+
+    const email = document.getElementById('emailInput').value;
+    
+    btn.classList.add('disabled'); 
+    btn.disabled = true;
+
+    try {
+        const response = await fetch('/email/send-code/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ email: email })
+        });
+        const data = await response.json();
+        
+        if (!data.success) {
+            btn.classList.remove('disabled');
+            btn.disabled = false;
+            throw new Error(data.message);
+        }
+
+        alert("인증코드를 재발송했습니다.");
+        
+        document.getElementById('codeInput').value = '';
+        const errorMsg = document.getElementById('codeErrorMsg');
+        if(errorMsg) errorMsg.style.display = 'none';
+        
+        if (typeof startAuthTimer === 'function') {
+            startAuthTimer(300, 'timerDisplay');
+        }
+        
+        localStorage.setItem('signupCooldownEnd', Date.now() + 60000);
+        lockSignupResendBtn(60);
+
+    } catch (error) {
+        alert(error.message || "재발송 실패");
+        btn.classList.remove('disabled');
+        btn.disabled = false;
+    }
+}
+
+function lockSignupResendBtn(seconds) {
+    const btn = document.getElementById('resendBtn');
+    if (!btn) return;
+
+    btn.classList.add('disabled');
+    btn.disabled = true; 
+    
+    let remaining = seconds;
+    btn.innerText = `재발송 (${remaining}s)`;
+
+    if (btn.timerId) clearInterval(btn.timerId);
+
+    btn.timerId = setInterval(() => {
+        remaining--;
+        btn.innerText = `재발송 (${remaining}s)`;
+
+        if (remaining <= 0) {
+            clearInterval(btn.timerId);
+            btn.classList.remove('disabled');
+            btn.disabled = false; 
+            btn.innerText = "인증 번호 재요청";
+            localStorage.removeItem('signupCooldownEnd');
+        }
+    }, 1000);
+}
+
+async function confirmVerification() {
+    const codeInput = document.getElementById('codeInput');
+    const codeError = document.getElementById('codeErrorMsg');
+    const code = codeInput.value;
+    const email = document.getElementById('emailInput').value;
+
+    codeError.style.display = 'none';
+    codeInput.classList.remove('input-error');
+
+    if (!code) {
+        showError('codeErrorMsg', 'codeInput', "인증번호를 입력해주세요.", 'confirmBtn');
+        return;
+    }
+
+    try {
+        const response = await fetch('/email/verify-code/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ 
+                email: document.getElementById('emailInput').value,
+                code: code 
+            })
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error("인증번호가 일치하지 않습니다.");
+
+        alert("인증이 완료되었습니다!");
+        switchModal('signupModal', 'passwordModal');
+    } catch (error) {
+        showError('codeErrorMsg', 'codeInput', error.message, 'confirmBtn');
+    }
+}
+
+let authTimerInterval = null;
+let resendLockTimeout = null; 
+let isResendLocked = false;
+
+function startAuthTimer(duration, displayId = 'timerDisplay') {
+    let timer = duration;
+    const display = document.getElementById(displayId);
+    
+    if (authTimerInterval) clearInterval(authTimerInterval);
+    
+    updateDisplay(); 
+    
+    authTimerInterval = setInterval(function () {
+        timer--;
+        updateDisplay();
+
+        if (timer < 0) {
+            clearInterval(authTimerInterval);
+            display.textContent = "시간 만료"; 
+        }
+    }, 1000);
+
+    function updateDisplay() {
+        const minutes = parseInt(timer / 60, 10);
+        const seconds = parseInt(timer % 60, 10);
+        display.textContent = "인증 만료 " + minutes + ":" + (seconds < 10 ? "0" + seconds : seconds);
+    }
+}
+
+function startResendLock(duration) {
+    const resendBtn = document.getElementById('resendBtn');
+    
+    isResendLocked = true;
+    resendBtn.classList.add('disabled'); 
+    
+    if (resendLockTimeout) clearTimeout(resendLockTimeout);
+
+    resendLockTimeout = setTimeout(() => {
+        unlockResendBtn();
+    }, duration * 1000);
+}
+
+function unlockResendBtn() {
+    const resendBtn = document.getElementById('resendBtn');
+    isResendLocked = false;
+    resendBtn.classList.remove('disabled');
+}
+
+async function submitPassword() {
+    const pw = document.getElementById('pwInput').value;
+    const pwConfirm = document.getElementById('pwConfirmInput').value;
+    
+    resetErrorState('pwInput', 'pwErrorMsg', 'pwSubmitBtn');
+    resetErrorState('pwConfirmInput', 'pwErrorMsg', 'pwSubmitBtn');
+
+    if (!pw || !pwConfirm) {
+        showError('pwErrorMsg', 'pwInput', "비밀번호를 입력해주세요.", 'pwSubmitBtn');
+        return;
+    }
+
+    const pwRegex = /^(?=.*[a-z])(?=.*\d).{10,16}$/;
+    if (!pwRegex.test(pw)) {
+        showError('pwErrorMsg', 'pwInput', "영소문자와 숫자를 포함해 10~16자 이내로 다시 입력해주세요.", 'pwSubmitBtn');
+        return;
+    }
+    if (pw !== pwConfirm) {
+        showError('pwErrorMsg', 'pwConfirmInput', "비밀번호가 일치하지 않습니다.", 'pwSubmitBtn');
+        return;
+    }
+
+    try {
+        const response = await fetch('/password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ password: pw })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.message);
+        }
+
+        switchModal('passwordModal', 'teamModal');
+
+    } catch (error) {
+        showError('pwErrorMsg', 'pwInput', error.message || "오류가 발생했습니다.", 'pwSubmitBtn');
+    }
+}
+
+let selectedTeamCode = null;
+
+function selectTeam(btnElement, teamCode) {
+    const buttons = document.querySelectorAll('.team-btn');
+    buttons.forEach(btn => btn.classList.remove('selected'));
+    btnElement.classList.add('selected');
+    selectedTeamCode = teamCode;
+}
+
+async function completeSignup() {
+    if (!selectedTeamCode) {
+        alert("선호 구단을 선택해주세요.");
+        return;
+    }
+
+    try {
+        const response = await fetch('/signup', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ 
+                team: selectedTeamCode
+            })
+        });
+        
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message);
+        }
+        
+        alert("회원가입이 완료되었습니다!\n로그인을 진행해주세요.");
+        switchModal('teamModal', 'loginModal');
+    } catch (error) {
+        alert("회원가입 중 오류가 발생했습니다.");
+    }
+}
+
+function showError(msgId, inputId, message, targetBtnId) {
+    const msgEl = document.getElementById(msgId);
+    const inputEl = document.getElementById(inputId);
+    const btnEl = document.getElementById(targetBtnId); 
+    
+    if(msgEl) {
+        msgEl.innerText = message;
+        msgEl.style.display = 'block';
+    }
+    if(inputEl) {
+        inputEl.classList.add('input-error');
+        inputEl.focus();
+    }
+    if(btnEl) {
+        btnEl.disabled = true;
+    }
+}
+
+function resetErrorState(inputId, msgId, btnId) {
+    const inputEl = document.getElementById(inputId);
+    const msgEl = document.getElementById(msgId);
+    const btnEl = document.getElementById(btnId);
+
+    if(inputEl) inputEl.classList.remove('input-error');
+    if(msgEl) msgEl.style.display = 'none';
+    if(btnEl) btnEl.disabled = false;
+}
+
+let loginLockTimer = null; 
+async function login() {
+    const email = document.getElementById('loginEmailInput').value;
+    const pw = document.getElementById('loginPwInput').value;
+    
+    resetErrorState('loginEmailInput', 'loginErrorMsg', 'loginBtn');
+    resetErrorState('loginPwInput', 'loginErrorMsg', 'loginBtn');
+
+    if(!email || !pw) {
+            showError('loginErrorMsg', 'loginEmailInput', "이메일과 비밀번호를 입력해주세요.", 'loginBtn');
+            document.getElementById('loginPwInput').classList.add('input-error');
+            return;
+    }
+
+    try {
+        const response = await fetch('/login', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ email: email, password: pw })
+        });
+        
+        const data = await response.json();
+
+        if(data.success) {
+            location.href = 'videos/home';
+        } else {
+            if (data.code === 'LOCKED') {
+                startLoginLockDown(600); 
+            } else {
+                throw new Error(data.message || "비밀번호가 일치하지 않습니다.");
+            }
+        }
+
+    } catch(error) {
+        showError('loginErrorMsg', 'loginPwInput', error.message, 'loginBtn');
+    }
+}
+
+function startLoginLockDown(duration) {
+    const errorMsg = document.getElementById('loginErrorMsg');
+    const loginBtn = document.getElementById('loginBtn');
+    const emailInput = document.getElementById('loginEmailInput');
+    const pwInput = document.getElementById('loginPwInput');
+
+    loginBtn.disabled = true;
+    emailInput.disabled = true;
+    pwInput.disabled = true;
+
+    errorMsg.style.display = 'block';
+    errorMsg.style.color = '#E50914';
+    errorMsg.style.textAlign = 'left'; 
+    errorMsg.style.fontSize = '0.9rem';
+    errorMsg.style.lineHeight = '1.5';
+
+    let timer = duration;
+    
+    function updateText() {
+        const minutes = parseInt(timer / 60, 10);
+        const seconds = parseInt(timer % 60, 10);
+        const timeStr = (minutes < 10 ? "0" + minutes : minutes) + ":" + (seconds < 10 ? "0" + seconds : seconds);
+        
+        errorMsg.innerHTML = `5회 이상 로그인에 실패하였습니다.<br>10분간 로그인이 제한됩니다. ${timeStr}`;
+    }
+
+    updateText(); 
+    if (loginLockTimer) clearInterval(loginLockTimer);
+    loginLockTimer = setInterval(() => {
+        timer--;
+        updateText();
+
+        if (timer < 0) {
+            clearInterval(loginLockTimer);
+            
+            errorMsg.style.display = 'none';
+            errorMsg.innerHTML = ''; 
+            errorMsg.style.textAlign = 'left';
+            
+            loginBtn.disabled = false;
+            emailInput.disabled = false;
+            pwInput.disabled = false;
+            
+            alert("로그인 제한이 해제되었습니다. 다시 시도해주세요.");
+        }
+    }, 1000);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const findPwCooldown = localStorage.getItem('findPwCooldownEnd');
+    if (findPwCooldown) {
+        const remaining = Math.ceil((parseInt(findPwCooldown) - Date.now()) / 1000);
+        if (remaining > 0) {
+            lockFindPwResendBtn(remaining);
+        } else {
+            localStorage.removeItem('findPwCooldownEnd');
+        }
+    }
+
+    const signupCooldown = localStorage.getItem('signupCooldownEnd');
+    if (signupCooldown) {
+        const remaining = Math.ceil((parseInt(signupCooldown) - Date.now()) / 1000);
+        if (remaining > 0) {
+            lockSignupResendBtn(remaining);
+        } else {
+            localStorage.removeItem('signupCooldownEnd');
+        }
+    }
+});
+
+async function resendResetCode() {
+    const btn = document.getElementById('findPwResendBtn');
+    
+    const storedCooldown = localStorage.getItem('findPwCooldownEnd');
+    const now = Date.now();
+
+    if (btn.disabled || (storedCooldown && parseInt(storedCooldown) > now)) {
+        alert("1분이 지난 후에 재요청할 수 있습니다.");
+        
+        if (!btn.disabled && storedCooldown) {
+            lockFindPwResendBtn(Math.ceil((parseInt(storedCooldown) - now) / 1000));
+        }
+        return; 
+    }
+
+    const email = document.getElementById('findPwEmailInput').value;
+    
+    btn.disabled = true;
+
+    try {
+        const response = await fetch('/password_reset', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ email: email })
+        });
+        const data = await response.json();
+        
+        if (!data.success) {
+            btn.disabled = false; 
+            throw new Error(data.message);
+        }
+
+        alert("인증코드를 재발송했습니다.");
+        
+        document.getElementById('findPwCodeInput').value = '';
+        const errorMsg = document.getElementById('findPwCodeErrorMsg');
+        if(errorMsg) errorMsg.style.display = 'none';
+        
+        if (typeof startAuthTimer === 'function') {
+            startAuthTimer(300, 'findPwTimerDisplay');
+        }
+        
+        localStorage.setItem('findPwCooldownEnd', Date.now() + 60000);
+        lockFindPwResendBtn(60);
+
+    } catch (error) {
+        alert(error.message);
+        btn.disabled = false;
+    }
+}
+
+function lockFindPwResendBtn(seconds) {
+    const btn = document.getElementById('findPwResendBtn');
+    if (!btn) return;
+
+    btn.classList.add('disabled');
+    btn.disabled = true; 
+    
+    let remaining = seconds;
+    btn.innerText = `재발송 (${remaining}s)`;
+
+    if (btn.timerId) clearInterval(btn.timerId);
+    btn.timerId = setInterval(() => {
+        remaining--;
+        btn.innerText = `재발송 (${remaining}s)`;
+
+        if (remaining <= 0) {
+            clearInterval(btn.timerId);
+            btn.classList.remove('disabled');
+            btn.disabled = false; 
+            btn.innerText = "인증 번호 재요청"; 
+            localStorage.removeItem('findPwCooldownEnd'); 
+        }
+    }, 1000);
+}
+
+async function requestPwResetCode() {
+    const emailInput = document.getElementById('findPwEmailInput');
+    const email = emailInput.value.trim();
+
+    resetErrorState('findPwEmailInput', 'findPwErrorMsg', 'findPwBtn');
+
+    if (!email) {
+        showError('findPwErrorMsg', 'findPwEmailInput', "이메일을 입력해주세요.", 'findPwBtn');
+        return;
+    }
+    if (!isValidEmailFormat(email)) {
+        showError('findPwErrorMsg', 'findPwEmailInput', "이메일 형식이 올바르지 않습니다.", 'findPwBtn');
+        return;
+    }
+
+    try {
+        const response = await fetch('/password_reset', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ email: email })
+        });
+        const data = await response.json();
+
+        if (!data.success) throw new Error(data.message);
+        alert("인증코드가 발송되었습니다.");
+        
+        emailInput.setAttribute('readonly', true);
+        document.getElementById('findPwVeriSection').style.display = 'block';
+        document.getElementById('findPwBtn').style.display = 'none';
+        document.getElementById('findPwConfirmBtn').style.display = 'block';
+
+        startAuthTimer(300, 'findPwTimerDisplay');
+        startResendLock(60); 
+        lockFindPwResendBtn(60);
+
+    } catch (error) {
+        showError('findPwErrorMsg', 'findPwEmailInput', error.message, 'findPwBtn');
+    }
+}
+
+async function confirmPwResetCode() {
+    const email = document.getElementById('findPwEmailInput').value;
+    const codeInput = document.getElementById('findPwCodeInput');
+    const code = codeInput.value;
+
+    if (!code) {
+        showError('findPwCodeErrorMsg', 'findPwCodeInput', "인증번호를 입력해주세요.", 'findPwConfirmBtn');
+        return;
+    }
+
+    try {
+        const response = await fetch('/password_reset/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ email: email, code: code })
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message);
+        switchModal('findPwModal', 'resetPwModal');
+    } catch (error) {
+        showError('findPwCodeErrorMsg', 'findPwCodeInput', error.message, 'findPwConfirmBtn');
+    }
+}
+
+async function submitResetPassword() {
+    const pw = document.getElementById('resetPwInput').value;
+    const pwConfirm = document.getElementById('resetPwConfirmInput').value;
+    
+    resetErrorState('resetPwInput', 'resetPwErrorMsg', 'resetPwSubmitBtn');
+    resetErrorState('resetPwConfirmInput', 'resetPwErrorMsg', 'resetPwSubmitBtn');
+
+    if (!pw || !pwConfirm) {
+        showError('resetPwErrorMsg', 'resetPwInput', "비밀번호를 입력해주세요.", 'resetPwSubmitBtn');
+        return;
+    }
+
+    const pwRegex = /^(?=.*[a-z])(?=.*\d).{10,16}$/;
+    if (!pwRegex.test(pw)) {
+        showError('resetPwErrorMsg', 'resetPwInput', "영소문자와 숫자를 포함해 10~16자 이내로 다시 입력해주세요.", 'resetPwSubmitBtn');
+        return;
+    }
+    if (pw !== pwConfirm) {
+        showError('resetPwErrorMsg', 'resetPwConfirmInput', "비밀번호가 일치하지 않습니다.", 'resetPwSubmitBtn');
+        return;
+    }
+
+    try {
+        const response = await fetch('/password_reset/final', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ password: pw })
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message);
+
+        alert("비밀번호 재설정이 완료되었습니다.\n새로운 비밀번호로 로그인해주세요.");
+        switchModal('resetPwModal', 'loginModal');
+    } catch (error) {
+        showError('resetPwErrorMsg', 'resetPwInput', error.message, 'resetPwSubmitBtn');
+    }
+}
+
+window.onload = function() {
+    typeWriter(); 
+    setupAutocomplete('emailInput', 'suggestionList');              
+    setupAutocomplete('loginEmailInput', 'loginSuggestionList');    
+    setupAutocomplete('findPwEmailInput', 'findPwSuggestionList');  
+};
+</script>
+</html>

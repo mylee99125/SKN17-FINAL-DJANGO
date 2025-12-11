@@ -1,0 +1,17 @@
+asgiref==3.10.0
+boto3==1.41.3
+Django==5.2.8
+django-storages==1.14.6
+faiss-cpu==1.13.0
+fastapi==0.119.1
+gunicorn==23.0.0
+mysqlclient==2.2.7
+pandas==2.3.3
+pillow==12.0.0
+python-dotenv==1.2.1
+PyMySQL==1.1.0
+requests==2.32.3
+sqlparse==0.5.3
+uri-template==1.3.0
+uvicorn==0.38.0
+wheel==0.45.1

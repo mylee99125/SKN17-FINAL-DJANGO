@@ -1,0 +1,516 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BAIS - Home</title>
+    <link rel="icon" href="{% static 'images/logo.png' %}" type="image/x-icon"> 
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body class="main-body">
+    {% include 'layout/header.html' %}
+
+    <div class="content-wrapper">
+        {% if is_search_mode %}
+            <div class="search-result-container">
+                <h2 class="section-title">
+                    <span style="color:#E50914; padding-right: 10px;">{{ search_query }}</span> 검색 결과
+                </h2>
+
+                <h3 class="sub-section-title">하이라이트 ({{ search_highlights|length }})</h3>
+                <div class="video-grid">
+                    {% for video in search_highlights %}
+                    <div class="video-card" onclick="location.href='{% url 'videos:play' video.video_file_id %}'">
+                        <div class="video-thumb">
+                            <video src="{{ video.video_file.file_path.url }}" muted onmouseover="this.play()" onmouseout="this.pause();"></video>
+                        </div>
+                        <div class="video-info">
+                            <p class="video-title">{{ video.highlight_title }}</p>
+                            <p class="video-meta">{{ video.match_date|date:"Y-m-d" }}</p>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="no-data-msg">검색된 하이라이트 영상이 없습니다.</p>
+                    {% endfor %}
+                </div>
+
+                <hr class="section-divider" style="margin: 50px 0;">
+
+                <h3 class="sub-section-title">내 업로드 영상 ({{ search_uploads|length }})</h3>
+                <div class="video-grid">
+                    {% for video in search_uploads %}
+                    <div class="video-card" onclick="location.href='{% url 'videos:play_user_video' video.upload_file.file_id %}'">
+                        <div class="video-thumb">
+                            <video src="{{ video.upload_file.file_path.url }}" muted onmouseover="this.play()" onmouseout="this.pause();"></video>
+                        </div>
+                        <div class="video-info">
+                            <p class="video-title">{{ video.upload_title }}</p>
+                            <p class="video-meta">{{ video.upload_date|date:"Y-m-d" }}</p>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="no-data-msg">검색된 업로드 영상이 없습니다.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+        {% else %}
+            <div class="wbc-banner-section">
+                <div class="banner-bg"></div>
+                <div class="banner-overlay"></div>
+                <div class="banner-content">
+                    <div class="banner-badge">OFFICIAL PARTNER</div>
+                    <h2>2026 WBC <span class="highlight">TEAM KOREA</span></h2>
+                    <p>대한민국 야구의 새로운 역사, 그 위대한 도전을 함께 응원합니다.</p>
+                </div>
+            </div>
+            {% if is_team_korea %}
+                <div class="section-header">
+                    <h2 class="section-title">{{ current_team_name }}</h2>
+                </div>
+                
+                <div class="video-grid">
+                    {% for video in my_team_videos %}
+                    <div class="video-card" onclick="location.href='{% url 'videos:play' video.video_file_id %}'">
+                        <div class="video-thumb">
+                            <video 
+                                src="{{ video.video_file.file_path.url }}" 
+                                muted onmouseover="this.play()" onmouseout="this.pause();">
+                            </video>
+                        </div>
+                        <div class="video-info">
+                            <p class="video-title">{{ video.highlight_title }}</p>
+                            <p class="video-meta">{{ video.match_date|date:"Y년 m월 d일" }}</p>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="no-data-msg">등록된 영상이 없습니다.</p>
+                    {% endfor %}
+                </div>
+
+            {% else %}
+                <div class="section-header">
+                    <h2 class="section-title" style="margin-top: 0;">{{ current_team_name }} 하이라이트 영상</h2>
+                </div>
+                
+                {% if my_team_videos %}
+                    <div class="carousel-container">
+                        <button class="carousel-btn left" onclick="moveMyTeamPage(-1)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                        </button>
+                        
+                        <div class="horizontal-scroll-container" id="myTeamList">
+                            {% for video in my_team_videos %}
+                            <div class="video-card-horizontal" onclick="location.href='{% url 'videos:play' video.video_file_id %}'">
+                                <div class="video-thumb">
+                                    <video src="{{ video.video_file.file_path.url }}" muted onmouseover="this.play()" onmouseout="this.pause();"></video>
+                                </div>
+                                <div class="video-info">
+                                    <p class="video-title">{{ video.highlight_title }}</p>
+                                    <p class="video-meta">{{ video.match_date|date:"Y년 m월 d일" }}</p>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <button class="carousel-btn right" onclick="moveMyTeamPage(1)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+                {% else %}
+                    <div class="carousel-container">
+                        <div class="horizontal-scroll-container" id="myTeamList">
+                            <p class="no-data-msg">해당 구단의 최신 하이라이트 영상이 없습니다.</p>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <hr class="section-divider">
+
+                <div class="filter-section-wrapper">
+                    <h2 class="section-title">전체 하이라이트</h2>
+
+                    <form method="GET" class="search-filter-form">
+                        <input type="hidden" name="team" value="{{ current_team_code }}">
+                        
+                        <div class="sort-select-box">
+                            <select name="sort" onchange="this.form.submit()">
+                                <option value="latest" {% if sort_option == 'latest' %}selected{% endif %}>정렬 : 최신순</option>
+                                <option value="oldest" {% if sort_option == 'oldest' %}selected{% endif %}>정렬 : 오래된순</option>
+                                <option value="name" {% if sort_option == 'name' %}selected{% endif %}>정렬 : 이름순</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="video-grid" id="allVideoGrid">
+                    {% for video in other_videos %}
+                    <div class="video-card" onclick="location.href='{% url 'videos:play' video.video_file_id %}'">
+                        <div class="video-thumb">
+                            <video src="{{ video.video_file.file_path.url }}" muted onmouseover="this.play()" onmouseout="this.pause();"></video>
+                        </div>
+                        <div class="video-info">
+                            <p class="video-title">{{ video.highlight_title }}</p>
+                            <p class="video-meta">{{ video.match_date|date:"Y년 m월 d일" }}</p>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="no-data-msg">등록된 하이라이트 영상이 없습니다.</p>
+                    {% endfor %}
+                </div>
+
+                <div class="load-more-container">
+                    <button id="loadMoreBtn" class="load-more-btn" onclick="loadMoreAllVideos()">
+                        LOAD MORE
+                    </button>
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    <div id="planModal" class="modal-overlay" style="display: none;">
+        <div class="plan-modal-box">
+            <span class="close-btn" onclick="closePlanModal()">&times;</span>
+            
+            <div class="plan-container">
+                <div class="plan-card active" onclick="selectPlan(this, 'FREE')">
+                    <div class="plan-badge">기본 제공</div>
+                    <div class="plan-price pt8"><span>월 정기 결제 없음</span></div>
+                    <ul class="plan-list">
+                        <li>해설위원 선택 (3명)</li>
+                        <li>영상 시청 (1회)</li>
+                    </ul>
+                    <p style="font-size:0.75rem; color:#999; margin-top:15px; line-height:1.4;">
+                        * 무료 시청은 1회만 가능하며<br>영상을 클릭하면 소멸됩니다.
+                    </p>
+                </div>
+
+                <div class="plan-card paid" onclick="selectPlan(this, 'BASIC')">
+                    <div class="plan-badge">베이직 플랜</div>
+                    <div class="plan-price">4,900원<span>/월</span></div>
+                    <ul class="plan-list">
+                        <li>해설위원 선택 (3명)</li>
+                        <li>영상 시청 (무제한)</li>
+                        <li>영상 업로드 (3GB)</li>
+                    </ul>
+                </div>
+
+                <div class="plan-card paid" onclick="selectPlan(this, 'PREMIUM')">
+                    <div class="plan-badge">프리미엄 플랜</div>
+                    <div class="plan-price">9,900원<span>/월</span></div>
+                    <ul class="plan-list">
+                        <li>해설위원 선택 (3명)</li>
+                        <li>영상 시청 (무제한)</li>
+                        <li>영상 업로드 (15GB)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="plan-info-text">
+                지금은 기본 기능만 경험하고 계시네요👀<br>
+                플랜을 업그레이드하고 더 강력한 퍼포먼스를 만나보세요!
+            </div>
+
+            <button class="plan-action-btn" onclick="submitPlan()">플랜 변경</button>
+        </div>
+    </div>
+
+    <div id="paymentModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content payment-box">
+            <span class="close-btn" onclick="closePaymentModal()">&times;</span>
+            
+            <h2 class="modal-title" style="margin-bottom: 5px;">결제하기</h2>
+            
+            <div class="selected-plan-info">
+                <h3 id="payPlanName">프리미엄 플랜</h3>
+            </div>
+
+            <div class="pay-section-label">결제 수단</div>
+            <div class="kakao-pay-container selected">
+                <img src="{% static 'images/kakaopay.svg' %}" alt="KakaoPay" id="kakaoPayLogo">
+            </div>
+
+            <!-- 가격 정보 -->
+            <div class="price-info-area">
+                <div class="price-row">
+                    <span>상품금액</span>
+                    <span id="payOriginPrice">9,900원</span>
+                </div>
+                <div class="price-row total">
+                    <span>결제금액</span>
+                    <span id="payFinalPrice">9,900원</span>
+                </div>
+            </div>
+
+            <div class="terms-wrapper">
+                <div class="term-header">
+                    <div class="checkbox-area">
+                        <input type="checkbox" id="termAll" onchange="toggleAllTerms(this)">
+                        <label for="termAll">주문상품정보 및 결제대행 서비스 이용 약관에 모두 동의합니다.</label>
+                    </div>
+                    <span class="toggle-arrow" onclick="toggleTermBody()"><i class="fas fa-chevron-down"></i></span>
+                </div>
+
+                <div class="term-body" id="termBody">
+                    <div class="term-item">
+                        <div class="checkbox-area">
+                            <input type="checkbox" id="term1" class="sub-term" onchange="checkSubTerms()">
+                            <label for="term1">제3자 정보제공 동의</label>
+                        </div>
+                        <span class="view-term-btn" onclick="openTextModal('term1')">전문보기</span>
+                    </div>
+                    <div class="term-item">
+                        <div class="checkbox-area">
+                            <input type="checkbox" id="term2" class="sub-term" onchange="checkSubTerms()">
+                            <label for="term2">서비스 이용약관</label>
+                        </div>
+                        <span class="view-term-btn" onclick="openTextModal('term2')">전문보기</span>
+                    </div>
+                </div>
+            </div>
+
+            <button class="modal-confirm-btn pay-btn" onclick="processPayment()" disabled>결제 진행</button>
+        </div>
+    </div>
+
+    <div id="docModal" class="modal-overlay">
+        <div class="modal-content" style="width: 600px; max-width: 90%; height: 70vh; display: flex; flex-direction: column;">
+            <span class="close-btn" onclick="closeTextModal()" style="z-index: 10;">&times;</span>
+            <h2 id="docTitle" class="modal-title" style="margin-bottom: 15px; flex-shrink: 0;">약관 상세</h2>
+            <div id="docContent" class="doc-scroll-box">
+                로딩 중...
+            </div>
+        </div>
+    </div>
+
+    <div id="successModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content success-box">
+            <span class="close-btn" onclick="closeSuccessModal()">&times;</span>
+            <h2 class="success-title">결제 완료</h2>
+            <div class="success-msg">
+                {{ plan_name }} 결제가 완료 되었습니다.
+            </div>
+            <div class="success-info">결제일 : {{ payment_date }}</div>
+            <div class="success-info">결제 금액 : {{ payment_amount }}</div>
+            <div class="success-desc">
+                모든 준비가 끝났습니다!<br>
+                지금 바로 업그레이드된 BAIS를 경험해보세요.
+            </div>
+            <button class="success-btn" onclick="closeSuccessModal()">메인 페이지로 가기</button>
+        </div>
+    </div>
+    {% include 'layout/footer.html' %}
+</body>
+<script>
+const termFilePaths = {
+    'term1': "{% static 'docs/term1.txt' %}",
+    'term2': "{% static 'docs/term2.txt' %}"
+};
+
+const shouldShowModal = "{{ show_plan_modal|yesno:'true,false' }}";
+const isPaymentSuccess = "{{ payment_success|yesno:'true,false' }}";
+
+window.onload = function() {
+    if (shouldShowModal === 'true') document.getElementById('planModal').style.display = 'flex';
+    if (isPaymentSuccess === 'true') document.getElementById('successModal').style.display = 'flex';
+    
+    const payBtn = document.querySelector('.pay-btn');
+    if(payBtn) payBtn.disabled = true;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('open_plan') === 'true') {
+        document.getElementById('planModal').style.display = 'flex';
+        
+        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+        window.history.replaceState({path: newUrl}, '', newUrl);
+    }
+};
+
+function closePlanModal() { document.getElementById('planModal').style.display = 'none'; }
+function closePaymentModal() { document.getElementById('paymentModal').style.display = 'none'; }
+function closeTextModal() { document.getElementById('docModal').style.display = 'none'; }
+function closeSuccessModal() { location.href = '/videos/home'; }
+
+let selectedPlan = 'FREE';
+
+function selectPlan(element, planCode) {
+    document.querySelectorAll('.plan-card').forEach(card => card.classList.remove('active'));
+    element.classList.add('active');
+    selectedPlan = planCode;
+}
+
+function submitPlan() {
+    if (selectedPlan === 'FREE') {
+        alert("이미 기본 플랜을 이용 중입니다.");
+        return;
+    }
+    
+    const planName = (selectedPlan === 'BASIC') ? '베이직 플랜' : '프리미엄 플랜';
+    const price = (selectedPlan === 'BASIC') ? '4,900원' : '9,900원';
+
+    document.getElementById('payPlanName').innerText = planName;
+    document.getElementById('payOriginPrice').innerText = price;
+    document.getElementById('payFinalPrice').innerText = price;
+    
+    closePlanModal();
+    
+    resetTerms();
+    document.getElementById('paymentModal').style.display = 'flex';
+}
+
+function resetTerms() {
+    document.getElementById('termAll').checked = false;
+    document.querySelectorAll('.sub-term').forEach(cb => cb.checked = false);
+    document.getElementById('termBody').style.display = 'none';
+    document.querySelector('.toggle-arrow i').style.transform = 'rotate(0deg)';
+    updatePayBtnState();
+}
+
+function toggleTermBody() {
+    const body = document.getElementById('termBody');
+    const arrow = document.querySelector('.toggle-arrow i');
+    const isHidden = body.style.display === 'none' || body.style.display === '';
+    
+    body.style.display = isHidden ? 'block' : 'none';
+    arrow.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+function toggleAllTerms(source) {
+    const checkboxes = document.querySelectorAll('.sub-term');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+    
+    if(source.checked) {
+        document.getElementById('termBody').style.display = 'block';
+        document.querySelector('.toggle-arrow i').style.transform = 'rotate(180deg)';
+    }
+    updatePayBtnState();
+}
+
+function checkSubTerms() {
+    const all = document.getElementById('termAll');
+    const subs = document.querySelectorAll('.sub-term');
+    const checkedCount = document.querySelectorAll('.sub-term:checked').length;
+
+    all.checked = (checkedCount === subs.length);
+    updatePayBtnState();
+}
+
+function updatePayBtnState() {
+    const isAllChecked = document.getElementById('termAll').checked;
+    const payBtn = document.querySelector('.pay-btn');
+    payBtn.disabled = !isAllChecked;
+}
+
+function openTextModal(termKey) {
+    const title = (termKey === 'term1') ? '제3자 정보제공 동의' : '서비스 이용약관';
+    document.getElementById('docTitle').innerText = title;
+    
+    const contentBox = document.getElementById('docContent');
+    contentBox.innerText = "로딩 중...";
+    document.getElementById('docModal').style.display = 'flex';
+
+    const filePath = termFilePaths[termKey];
+    fetch(filePath)
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.text();
+        })
+        .then(text => {
+            contentBox.innerText = text;
+        })
+        .catch(error => {
+            contentBox.innerText = "약관 내용을 불러오는데 실패했습니다.\n" + error;
+        });
+}
+
+function processPayment() {
+    if (document.querySelector('.pay-btn').disabled) return;
+    location.href = "{% url 'payments:sub_ready' %}?plan=" + selectedPlan;
+}
+
+let curMyTeamPage = 1;
+let curAllPage = 1;
+
+const urlParams = new URLSearchParams(window.location.search);
+const currentTeam = urlParams.get('team') || '{{ current_team_code }}';
+const currentQuery = urlParams.get('q') || '';
+const currentSort = urlParams.get('sort') || 'latest';
+
+function moveMyTeamPage(direction) {
+    const nextPage = curMyTeamPage + direction;
+    if (nextPage < 1) return; 
+
+    fetch(`/videos/list/?type=my_team&page=${nextPage}&team=${currentTeam}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.videos.length === 0) {
+                alert("더 이상 영상이 없습니다.");
+                return;
+            }
+            
+            curMyTeamPage = nextPage;
+            const container = document.getElementById('myTeamList');
+            container.innerHTML = ''; 
+
+            data.videos.forEach(video => {
+                const html = `
+                    <div class="video-card-horizontal" onclick="location.href='videos/play/${video.id}/'">
+                        <div class="video-thumb">
+                            <video src="${video.url}" muted onmouseover="this.play()" onmouseout="this.pause();this.currentTime=0;"></video>
+                        </div>
+                        <div class="video-info">
+                            <p class="video-title">${video.title}</p>
+                            <p class="video-meta">${video.date}</p>
+                        </div>
+                    </div>`;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        })
+        .catch(err => console.error(err));
+}
+
+function loadMoreAllVideos() {
+    const nextPage = curAllPage + 1;
+    const btn = document.getElementById('loadMoreBtn');
+    btn.innerText = "로딩 중...";
+
+    fetch(`/videos/list/?type=all&page=${nextPage}&team=${currentTeam}&q=${currentQuery}&sort=${currentSort}`)
+        .then(res => res.json())
+        .then(data => {
+            btn.innerHTML = '더보기 <span>∨</span>'; 
+
+            if (data.videos.length > 0) {
+                curAllPage = nextPage;
+                const container = document.getElementById('allVideoGrid');
+
+                data.videos.forEach(video => {
+                    const html = `
+                        <div class="video-card" onclick="location.href='videos/play/${video.id}/'">
+                            <div class="video-thumb">
+                                <video src="${video.url}" muted onmouseover="this.play()" onmouseout="this.pause();this.currentTime=0;"></video>
+                            </div>
+                            <div class="video-info">
+                                <p class="video-title">${video.title}</p>
+                                <p class="video-meta">${video.date}</p>
+                            </div>
+                        </div>`;
+                    container.insertAdjacentHTML('beforeend', html);
+                });
+            }
+
+            if (!data.has_next) {
+                btn.style.display = 'none';
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            btn.innerText = "오류 발생";
+        });
+}
+</script>
+</html>

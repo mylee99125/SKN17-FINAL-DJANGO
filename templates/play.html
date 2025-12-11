@@ -1,0 +1,396 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        {% if is_user_upload %}
+            BAIS - {{ video.title }}
+        {% else %}
+            BAIS - {{ video.highlight_title }}
+        {% endif %}
+    </title>
+    <link rel="icon" href="{% static 'images/logo.png' %}" type="image/x-icon"> 
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+
+<body class="play-body">
+    {% include 'layout/header.html' %}
+
+    <div class="play-container">
+        <div class="video-section">
+            <div class="video-player-wrapper" id="playerWrapper">
+                <video 
+                    controls 
+                    autoplay 
+                    playsinline
+                    controlsList="nodownload noplaybackrate" 
+                    oncontextmenu="return false;"
+                    class="main-video-player" 
+                    id="mainVideo">
+                    {% if is_user_upload %}
+                        <source src="{{ video.url }}" type="video/mp4">
+                    {% else %}
+                        <source src="{{ video.video_file.file_path.url }}" type="video/mp4">
+                    {% endif %}
+                    브라우저가 비디오를 지원하지 않습니다.
+                </video>
+                <div id="subtitleOverlay" class="subtitle-overlay"></div>
+                <button class="custom-fullscreen-btn" onclick="toggleCustomFullscreen()" title="전체화면">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7 14H5V19H10V17H7V14Z" fill="currentColor"/>
+                        <path d="M5 10H7V7H10V5H5V10Z" fill="currentColor"/>
+                        <path d="M17 17H14V19H19V14H17V17Z" fill="currentColor"/>
+                        <path d="M14 5V7H17V10H19V5H14Z" fill="currentColor"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="video-info-bar">
+                <h1 class="play-video-title" style="margin-top: 0;">
+                    {% if is_user_upload %}
+                        {{ video.title }}
+                    {% else %}
+                        {{ video.highlight_title }}
+                    {% endif %}
+                </h1>
+                
+                <p class="play-video-date">
+                    {% if is_user_upload %}
+                        업로드 날짜: {{ video.upload_date|date:"Y년 m월 d일" }}
+                    {% else %}
+                        {{ video.match_date|date:"Y년 m월 d일" }} 경기
+                    {% endif %}
+                </p>
+
+                <div class="notice-bar">
+                    <span class="notice-text">
+                        현재 <strong id="noticeCommName">{{ current_commentator|default:"박찬오" }} 해설위원</strong>으로 선택되어 있습니다.
+                        {% if is_user_upload %}
+                            사용자 업로드 영상은 해설위원 변경이 불가합니다.
+                        {% else %}
+                            변경을 원하시다면 우측 해설위원 선택창을 통해 변경이 가능합니다.
+                        {% endif %}
+                    </span>
+                    <div class="subtitle-control-group" onclick="event.stopPropagation();">
+                        <span class="subtitle-label" id="subtitleLabel">자막 ON</span>
+                        <label class="switch">
+                            <input type="checkbox" id="subtitleToggle" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="ai-panel">
+            <div class="chat-header">
+                <div class="header-info">
+                    <span class="live-badge">AI CHATBOT</span>
+                    <span class="mascot-name">BAIS AI 해설위원</span>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chatContainer">
+                <div class="message-row ai">
+                    <div class="msg-avatar">
+                        <img src="{% static 'images/logo.png' %}" alt="AI">
+                    </div>
+                    <div class="msg-content">
+                        <div class="msg-name">AI 해설위원</div>
+                        <div class="msg-bubble">
+                            안녕하세요! BAIS AI 해설위원입니다.<br>경기 상황아나 규칙에 대해 궁금한 점을 물어보세요!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <div class="input-wrapper">
+                    <input type="text" id="chatInput" placeholder="야구 규칙 물어보기" onkeypress="handleEnter(event)">
+                    <button class="send-btn" onclick="sendMessage()">→</button>
+                </div>
+            </div>
+
+            <div class="commentator-bar-wrapper">
+                <div class="commentator-bar" onclick="toggleCommentatorList()">
+                    <span class="current-commentator">{{ current_commentator|default:"박찬오" }} 해설위원</span>
+                    <span class="arrow-icon" id="commArrow">∨</span>
+                </div>
+
+                {% if is_user_upload %}
+                <div class="locked-commentator-box" id="lockedCommBox" style="display: none;">
+                    <h3 class="comm-popup-title">해설위원 선택</h3>
+                    
+                    <div class="comm-card-container">
+                        
+                        <div class="comm-card {% if current_commentator == '박찬오' %}selected{% endif %} disabled-card">
+                            <div class="comm-header">박찬오 해설위원</div>
+                            <div class="comm-img-box">
+                                <img src="{% static 'images/commentator/park.svg' %}" alt="박찬오">
+                            </div>
+                            <div class="comm-desc">
+                                한국 야구의 레전드,<br>끝없는 야구 철학!<br>
+                                풍부한 경험담과 열정이 넘치는 TMT 해설
+                            </div>
+                        </div>
+
+                        <div class="comm-card {% if current_commentator == '이순칠' %}selected{% endif %} disabled-card">
+                            <div class="comm-header">이순칠 해설위원</div>
+                            <div class="comm-img-box">
+                                <img src="{% static 'images/commentator/lee.svg' %}" alt="이순칠">
+                            </div>
+                            <div class="comm-desc">
+                                가감 없는 쓴소리와<br>날카로운 비판,<br>
+                                데이터에 기반한 객관적이고 시원시원한 해설
+                            </div>
+                        </div>
+
+                        <div class="comm-card {% if current_commentator == '김선오' %}selected{% endif %} disabled-card">
+                            <div class="comm-header">김선오 해설위원</div>
+                            <div class="comm-img-box">
+                                <img src="{% static 'images/commentator/kim.svg' %}" alt="김선오">
+                            </div>
+                            <div class="comm-desc">
+                                메이저리그 경험을 녹여낸 세련되고 부드러운 분석,<br>
+                                디테일한 해설을 제공하는<br>입문자 맞춤 해설
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="locked-msg">사용자가 올린 영상에서는 해설위원 선택이 불가합니다.</p>
+                    <button class="comm-select-btn disabled" onclick="toggleCommentatorList()">확인</button>
+                </div>
+                {% else %}
+                <div class="commentator-popup" id="commList">
+                    <div class="comm-popup-title">해설위원 선택</div>
+
+                    <div class="comm-card-container">
+                        <div class="comm-card selected" onclick="selectCommentator(this, '박찬오')">
+                            <div class="comm-header">박찬오 해설위원</div>
+                            <div class="comm-img-box">
+                                <img src="{% static 'images/commentator/park.svg' %}" alt="박찬오">
+                            </div>
+                            <div class="comm-desc">
+                                한국 야구의 레전드,<br>끝없는 야구 철학!<br>
+                                풍부한 경험담과 열정이 넘치는 TMT 해설
+                            </div>
+                        </div>
+
+                        <div class="comm-card" onclick="selectCommentator(this, '이순칠')">
+                            <div class="comm-header">이순칠 해설위원</div>
+                            <div class="comm-img-box">
+                                <img src="{% static 'images/commentator/lee.svg' %}" alt="이순칠">
+                            </div>
+                            <div class="comm-desc">
+                                가감 없는 쓴소리와<br>날카로운 비판,<br>
+                                데이터에 기반한 객관적이고 시원시원한 해설
+                            </div>
+                        </div>
+
+                        <div class="comm-card" onclick="selectCommentator(this, '김선오')">
+                            <div class="comm-header">김선오 해설위원</div>
+                            <div class="comm-img-box">
+                                <img src="{% static 'images/commentator/kim.svg' %}" alt="김선오">
+                            </div>
+                            <div class="comm-desc">
+                                메이저리그 경험을 녹여낸 세련되고 부드러운 분석,<br>
+                                디테일한 해설을 제공하는 입문자 맞춤 해설
+                            </div> 
+                        </div>
+                    </div>
+                    <p class="comm-notice-text">해설위원을 변경할 경우 영상은 자동으로 처음부터 실행됩니다.</p>
+                    <button class="comm-confirm-btn" onclick="confirmCommentator()">선택 완료</button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+const subtitleData = JSON.parse('{{ subtitle_data|safe }}');
+
+const video = document.getElementById('mainVideo');
+const subtitleBox = document.getElementById('subtitleOverlay');
+
+video.addEventListener('timeupdate', function() {
+    const currentTime = video.currentTime;
+    
+    const currentSub = subtitleData.find(sub => 
+        currentTime >= sub.start && currentTime <= sub.end
+    );
+
+    if (currentSub) {
+        subtitleBox.innerHTML = `<span>${currentSub.text}</span>`;
+        subtitleBox.style.opacity = 1;
+    } else {
+        subtitleBox.innerText = '';
+        subtitleBox.style.opacity = 0;
+    }
+});
+
+function toggleCommentatorList() {
+    const normalList = document.getElementById("commList");   
+    const lockedList = document.getElementById("lockedCommBox");
+    const arrow = document.getElementById("commArrow");
+    const targetList = normalList || lockedList;
+
+    if (!targetList || !arrow) return;
+
+    if (targetList.style.display === "block") {
+        targetList.style.display = "none";
+        arrow.style.transform = "rotate(0deg)";
+    } else {
+        targetList.style.display = "block";
+        arrow.style.transform = "rotate(180deg)";
+        targetList.style.animation = "popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+    }
+}
+
+let tempSelectedName = null;
+
+function selectCommentator(cardElement, name) {
+    document.querySelectorAll('.comm-card').forEach(card => card.classList.remove('selected'));
+    cardElement.classList.add('selected');
+    tempSelectedName = name;
+}
+
+function confirmCommentator() {
+    if (!tempSelectedName) {
+        toggleCommentatorList();
+        return;
+    }
+
+    const bottomBarText = document.querySelector('.current-commentator');
+    if (bottomBarText) {
+        bottomBarText.innerText = tempSelectedName + " 해설위원";
+    }
+
+    const noticeText = document.getElementById('noticeCommName');
+    if (noticeText) {
+        noticeText.innerText = tempSelectedName + " 해설위원";
+    }
+
+    // TODO: 여기서 나중에 AJAX로 영상 데이터 교체 요청
+    // changeVideoSource(tempSelectedName); 
+
+    toggleCommentatorList();
+}
+
+function handleEnter(e) {
+    if (e.key === 'Enter') sendMessage();
+}
+
+function sendQuickMsg(text) {
+    document.getElementById('chatInput').value = text;
+    sendMessage();
+}
+
+function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    const container = document.getElementById('chatContainer');
+
+    if (!text) return;
+
+    const userHtml = `
+        <div class="message-row user">
+            <div class="msg-content">
+                <div class="msg-bubble">${text}</div>
+            </div>
+        </div>
+    `;
+    container.insertAdjacentHTML('beforeend', userHtml);
+    input.value = '';
+    container.scrollTop = container.scrollHeight;
+
+    const csrftoken = getCookie('csrftoken');
+
+    fetch('/chatbot/api/chat/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({ message: text })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const aiHtml = `
+            <div class="message-row ai">
+                <div class="msg-avatar"><img src="{% static 'images/logo.png' %}" alt="AI"></div>
+                <div class="msg-content">
+                    <div class="msg-name">AI 해설위원</div>
+                    <div class="msg-bubble">${data.response}</div>
+                </div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', aiHtml);
+        container.scrollTop = container.scrollHeight;
+    })
+    .catch(error => {
+        const errorHtml = `
+            <div class="message-row ai">
+                <div class="msg-content">
+                    <div class="msg-bubble" style="color:red;">서버 연결에 실패했습니다.</div>
+                </div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', errorHtml);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const video = document.getElementById('mainVideo');
+    const subtitleBox = document.getElementById('subtitleOverlay');
+    
+    const subtitleToggle = document.getElementById('subtitleToggle');
+    const subtitleLabel = document.getElementById('subtitleLabel');
+
+    subtitleToggle.addEventListener('change', function() {
+        if (this.checked) {
+            subtitleBox.style.display = 'block'; 
+            subtitleLabel.innerText = "자막 ON";
+            subtitleLabel.style.color = "#E50914";
+        } else {
+            subtitleBox.style.display = 'none';
+            subtitleLabel.innerText = "자막 OFF";
+            subtitleLabel.style.color = "#555"; 
+        }
+    });
+
+    if (video) {
+        video.addEventListener('timeupdate', function() {
+            if (!subtitleToggle.checked) return; 
+
+            const currentTime = video.currentTime;
+            const currentSub = subtitleData.find(sub => 
+                currentTime >= sub.start && currentTime <= sub.end
+            );
+
+            if (currentSub) {
+                if (subtitleBox.innerText !== currentSub.text) {
+                    subtitleBox.innerHTML = `<span>${currentSub.text}</span>`;
+                    subtitleBox.classList.add('show');
+                }
+            } else {
+                subtitleBox.innerText = '';
+                subtitleBox.classList.remove('show');
+            }
+        });
+    }
+});
+
+function toggleCustomFullscreen() {
+    const wrapper = document.getElementById('playerWrapper');
+    if (!document.fullscreenElement) {
+        wrapper.requestFullscreen().catch(err => {
+            console.error(`전체화면 오류: ${err.message}`);
+        });
+    } else {
+        document.exitFullscreen();
+    }
+}
+</script>
+</html>
