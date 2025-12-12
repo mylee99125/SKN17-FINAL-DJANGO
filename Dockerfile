@@ -22,4 +22,4 @@ COPY . .
 RUN python manage.py collectstatic --noinput || true
 
 # gunicorn 설정 파일 이름 확인
-CMD ["bash","-lc","python manage.py migrate && gunicorn project4.wsgi:application --config gunicorn.conf.py --bind 0.0.0.0:8000"]
+CMD ["bash","-lc","python manage.py migrate && gunicorn SKN17_FINAL_3TEAM.wsgi:application --config gunicorn.conf.py --bind 0.0.0.0:8000"]

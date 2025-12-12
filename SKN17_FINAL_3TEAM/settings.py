@@ -16,6 +16,17 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 DEBUG = False   # 배포 시엔 반드시 False
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "54.116.12.113"]
 
+CSRF_TRUSTED_ORIGINS = [
+    "http://54.116.12.113",
+    "http://54.116.12.113:8080",
+]
+
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -104,18 +115,6 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
-STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [
-    BASE_DIR / "static",
-]
-
-MEDIA_URL = "/files/uploads/"
-MEDIA_ROOT = BASE_DIR / "files" / "uploads"
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -136,10 +135,29 @@ if not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
 USE_S3_UPLOADS = True  # S3 사용 여부 (로컬만 쓸 땐 False)
 # USE_S3_UPLOADS = False  # S3 사용 여부 (로컬만 쓸 땐 False)
 
+# STATIC_ROOT = BASE_DIR / "staticfiles"
+
 AWS_REGION = os.getenv("AWS_REGION", "ap-northeast-2")
 AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET", "")
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+AWS_S3_CUSTOM_DOMAIN = f'{AWS_S3_BUCKET}.s3.amazonaws.com'
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400',
+}
+
+AWS_LOCATION = 'static'
+
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "OPTIONS": {"location": "media"},
+    },
+    "staticfiles": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "OPTIONS": {"location": "static"},
+    },
+}
 
 
 # RunPod
