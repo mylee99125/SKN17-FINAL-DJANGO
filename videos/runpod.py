@@ -17,11 +17,11 @@ class RunPodClient:
     def __init__(self):
         self.s3_client = boto3.client(
             's3',
-            region_name=settings.AWS_REGION,
+            region_name=settings.AWS_S3_REGION_NAME,
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
         )
-        self.bucket_name = settings.AWS_S3_BUCKET_NAME
+        self.bucket_name = settings.AWS_STORAGE_BUCKET_NAME
         self.runpod_url = settings.RUNPOD_API_URL
         self.session = self._create_resilient_session()
         self.ANALYST_MAPPING = {
@@ -105,7 +105,7 @@ class RunPodClient:
             
             timestamp = int(time.time())
             output_key = f"outputs/result_{timestamp}.mp4"
-            upload_url = f"https://{self.bucket_name}.s3.{settings.AWS_REGION}.amazonaws.com/{output_key}"
+            upload_url = f"https://{self.bucket_name}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{output_key}"
 
             logger.info(f"S3 Input URL: {download_url}")
             job_id = self.submit_job(download_url, upload_url, runpod_analyst_id)
