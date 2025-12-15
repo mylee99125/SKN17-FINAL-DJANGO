@@ -85,8 +85,8 @@ def upload_video(request):
                 return JsonResponse({'status': 'error', 'message': '파일이 없습니다.'}, status=400)
 
             result = services.process_upload_video(
-                user=user_id, 
-                video_file=uploaded_file, 
+                user_id=user_id, 
+                uploaded_file=uploaded_file, 
                 title=title, 
                 commentator_name=commentator
             )

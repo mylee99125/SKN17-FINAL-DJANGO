@@ -51,15 +51,22 @@ class RunPodClient:
     def submit_job(self, download_url, upload_url, runpod_analyst_id):
         payload = {
             "input": {
-                's3_video_url': download_url,
-                's3_upload_url': upload_url,
-                'analyst_select': runpod_analyst_id 
+                's3_video_url': str(download_url),
+                's3_upload_url': str(upload_url),
+                'analyst_select': int(runpod_analyst_id) 
             }
         }
         endpoint = f"{self.runpod_url}/process_video"
+        logger.info(f"RunPod Request Payload: {payload}")
 
         response = self.session.post(endpoint, json=payload, timeout=30)
-        response.raise_for_status()
+
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"Runpod Error Response: {response.text}")
+            raise e
+
         return response.json()['job_id']
     
     def download_result_from_s3(self, s3_key, original_file_name=None):
@@ -98,11 +105,17 @@ class RunPodClient:
             if processing_code:
                 user_upload_instance.upload_status_code = processing_code
                 user_upload_instance.save()
-
             runpod_analyst_id = self.ANALYST_MAPPING.get(db_analyst_id, 1)
-
-            download_url = user_upload_instance.upload_file.file_path.url
             
+            local_file_path = user_upload_instance.upload_file.file_path.path
+            file_name = os.path.basename(local_file_path)
+            s3_input_key = f"inputs/{int(time.time())}_{file_name}"
+            
+            logger.info(f"Uploading local file to S3: {local_file_path} -> {s3_input_key}")
+            
+            self.s3_client.upload_file(local_file_path, self.bucket_name, s3_input_key)
+            download_url = f"https://{self.bucket_name}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{s3_input_key}"
+
             timestamp = int(time.time())
             output_key = f"outputs/result_{timestamp}.mp4"
             upload_url = f"https://{self.bucket_name}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{output_key}"
@@ -131,9 +144,11 @@ class RunPodClient:
 
                     original_name = user_upload_instance.upload_file.file_path.name
                     saved_relative_path = self.download_result_from_s3(output_s3_key, original_name)
+
                     original_file_info = user_upload_instance.upload_file
                     if os.path.exists(original_file_info.file_path.path):
                         os.remove(original_file_info.file_path.path)
+                        
                     original_file_info.file_path = saved_relative_path
                     original_file_info.save()
                     

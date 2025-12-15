@@ -324,7 +324,7 @@ def process_upload_video(user_id, uploaded_file, title, commentator_name):
     thread.start()
     
     return {
-        'file_id': new_upload.id,
+        'file_id': new_upload.pk,
         'status': 'success'
     }
 
