@@ -73,7 +73,9 @@ def my_videos(request):
         return redirect('/')
 
 def upload_video(request):
-    if request.method == 'POST' and request.user.is_authenticated:
+    user_id = request.session.get('user_id')
+
+    if request.method == 'POST' and user_id:
         try:
             uploaded_file = request.FILES.get('video_file')
             title = request.POST.get('video_title')
@@ -83,7 +85,7 @@ def upload_video(request):
                 return JsonResponse({'status': 'error', 'message': '파일이 없습니다.'}, status=400)
 
             result = services.process_upload_video(
-                user=request.user, 
+                user=user_id, 
                 video_file=uploaded_file, 
                 title=title, 
                 commentator_name=commentator
@@ -91,8 +93,8 @@ def upload_video(request):
 
             return JsonResponse({
                 'status': 'success', 
-                'message': '업로드 및 처리가 완료되었습니다.',
-                'file_id': result['file_id']
+                'message': '업로드 완료!',
+                'file_id': result.get('file_id')
             })
             
         except ValueError as e:

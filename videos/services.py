@@ -281,51 +281,52 @@ def get_my_videos_context(user_id):
     }
 
 
-def process_upload_video(user, video_file, title, commentator_name):
-    if not user.is_authenticated:
-        raise ValueError("로그인이 필요한 서비스입니다.")
+def process_upload_video(user_id, uploaded_file, title, commentator_name):
+    try:
+        user = UserInfo.objects.get(user_id=user_id)
+    except UserInfo.DoesNotExist:
+        raise ValueError("유효하지 않은 사용자입니다.")
 
-    if not video_file.name.lower().endswith('.mp4'):
+    if not uploaded_file.name.lower().endswith('.mp4'):
         raise ValueError('MP4 형식의 파일만 업로드 가능합니다.')
 
-    try:
-        real_user_info = UserInfo.objects.get(user=user)
-        analyst_map = {
-            '박찬오': 17,
-            '이순칠': 18,
-            '김선오': 19
-        }
-        analyst_id = analyst_map.get(commentator_name, 17)
-        file_info = FileInfo.objects.create(file_path=video_file)
-        
-        try:
-            status_uploaded = CommonCode.objects.get(common_code=20, common_code_grp='STATUS')
-        except CommonCode.DoesNotExist:
-            raise ValueError('DB 상태 코드(20) 설정 오류')
+    new_file_info = FileInfo.objects.create(file_path=uploaded_file)
+    
+    status_code_20 = CommonCode.objects.get(common_code=20, common_code_grp='STATUS')
+    commentator_code_obj = CommonCode.objects.filter(common_code_value=commentator_name, common_code_grp='COMMENTATOR').first()
+    db_analyst_id = commentator_code_obj.common_code if commentator_code_obj else 17
+    
+    new_upload = UserUploadVideo.objects.create(
+        upload_file=new_file_info,
+        user=user,
+        upload_status_code=status_code_20,
+        upload_title=title,
+        upload_date=timezone.now(),
+        download_count=0,
+        use_yn=True
+    )
+    
+    SubtitleInfo.objects.create(
+        upload_file=new_upload,
+        video_file=None,
+        commentator_code=commentator_code_obj,
+        subtitle=b''
+    )
 
-        user_upload = UserUploadVideo.objects.create(
-            upload_file=file_info,
-            user=real_user_info, 
-            upload_status_code=status_uploaded,
-            upload_title=title,
-            upload_date=timezone.now()
-        )
+    file_size_kb = math.ceil(uploaded_file.size / 1024)
+    user.storage_usage += file_size_kb
+    user.save()
 
-        task_thread = threading.Thread(
-            target=runpod_client.process_and_monitor,
-            args=(user_upload, None, int(analyst_id))
-        )
-        task_thread.daemon = True
-        task_thread.start()
-
-        return {
-            'success': True,
-            'file_id': file_info.file_id
-        }
-
-    except Exception as e:
-        logger.error(f"Service Error: {str(e)}")
-        raise e
+    thread = threading.Thread(
+        target=runpod_client.process_and_monitor,
+        args=(new_upload, None, db_analyst_id)
+    )
+    thread.start()
+    
+    return {
+        'file_id': new_upload.id,
+        'status': 'success'
+    }
 
 
 def process_download_logic(user_id, video_id):
