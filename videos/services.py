@@ -282,31 +282,30 @@ def get_my_videos_context(user_id):
 
 
 def process_upload_video(user, video_file, title, commentator_name):
+    if not user.is_authenticated:
+        raise ValueError("로그인이 필요한 서비스입니다.")
+
     if not video_file.name.lower().endswith('.mp4'):
         raise ValueError('MP4 형식의 파일만 업로드 가능합니다.')
 
     try:
+        real_user_info = UserInfo.objects.get(user=user)
         analyst_map = {
             '박찬오': 17,
             '이순칠': 18,
             '김선오': 19
         }
         analyst_id = analyst_map.get(commentator_name, 17)
-
         file_info = FileInfo.objects.create(file_path=video_file)
+        
         try:
             status_uploaded = CommonCode.objects.get(common_code=20, common_code_grp='STATUS')
         except CommonCode.DoesNotExist:
             raise ValueError('DB 상태 코드(20) 설정 오류')
-        
-        try:
-            real_user_info = UserInfo.objects.get(user=user)
-        except Exception:
-            real_user_info = UserInfo.objects.get(pk=user.pk)
 
         user_upload = UserUploadVideo.objects.create(
             upload_file=file_info,
-            user=real_user_info,  
+            user=real_user_info, 
             upload_status_code=status_uploaded,
             upload_title=title,
             upload_date=timezone.now()
@@ -326,7 +325,7 @@ def process_upload_video(user, video_file, title, commentator_name):
 
     except Exception as e:
         logger.error(f"Service Error: {str(e)}")
-        raise e 
+        raise e
 
 
 def process_download_logic(user_id, video_id):

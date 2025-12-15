@@ -73,7 +73,7 @@ def my_videos(request):
         return redirect('/')
 
 def upload_video(request):
-    if request.method == 'POST' and request.session.get('user_id'):
+    if request.method == 'POST' and request.user.is_authenticated:
         try:
             uploaded_file = request.FILES.get('video_file')
             title = request.POST.get('video_title')
