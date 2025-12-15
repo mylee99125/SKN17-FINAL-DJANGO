@@ -298,10 +298,15 @@ def process_upload_video(user, video_file, title, commentator_name):
             status_uploaded = CommonCode.objects.get(common_code=20, common_code_grp='STATUS')
         except CommonCode.DoesNotExist:
             raise ValueError('DB 상태 코드(20) 설정 오류')
+        
+        try:
+            real_user_info = UserInfo.objects.get(user=user)
+        except Exception:
+            real_user_info = UserInfo.objects.get(pk=user.pk)
 
         user_upload = UserUploadVideo.objects.create(
             upload_file=file_info,
-            user=user,  
+            user=real_user_info,  
             upload_status_code=status_uploaded,
             upload_title=title,
             upload_date=timezone.now()
