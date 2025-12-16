@@ -1,15 +1,17 @@
 import boto3
 import requests
-import time, datetime
+import time
 import json
 import logging
 import os
+import tempfile
+import datetime
 from pathlib import Path
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from django.conf import settings
-from users.models import CommonCode  
-from .models import SubtitleInfo   
+from users.models import CommonCode
+from .models import SubtitleInfo
 
 logger = logging.getLogger(__name__)
 
@@ -42,56 +44,82 @@ class RunPodClient:
         try:
             return CommonCode.objects.get(common_code=code_val, common_code_grp=group_name)
         except CommonCode.DoesNotExist:
-            logger.error(f"CommonCode {code_val} (GRP: {group_name}) not found!")
             return None
-        
-    def get_s3_url(self, file_path_field):
-        return file_path_field.url
 
-    def submit_job(self, download_url, upload_url, runpod_analyst_id):
+    def upload_video_to_s3(self, django_file_field):
+        try:
+            filename = os.path.basename(django_file_field.name)
+        except Exception:
+            filename = f"video_{int(time.time())}.mp4"
+            
+        s3_key = f"inputs/{filename}"
+        
+        logger.info(f"📤 S3 업로드 시작 (Key: {s3_key})...")
+
+        with tempfile.NamedTemporaryFile(delete=True) as tmp:
+            for chunk in django_file_field.chunks():
+                tmp.write(chunk)
+            tmp.flush()
+            tmp.seek(0)
+            
+            self.s3_client.upload_file(
+                tmp.name,
+                self.bucket_name,
+                s3_key,
+                ExtraArgs={'ContentType': 'video/mp4'}
+            )
+            
+        logger.info(f"✅ S3 업로드 완료: s3://{self.bucket_name}/{s3_key}")
+        return s3_key
+
+    def generate_public_urls(self, input_s3_key):
+        download_url = f"https://{self.bucket_name}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{input_s3_key}"
+        
+        timestamp = int(time.time())
+        output_key = f"outputs/result_{timestamp}.mp4"
+        upload_url = f"https://{self.bucket_name}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{output_key}"
+        
+        return {
+            'download_url': download_url,
+            'upload_url': upload_url,
+            'output_key': output_key
+        }
+
+    def submit_job(self, download_url, upload_url, analyst_id):
         payload = {
             "input": {
-                's3_video_url': str(download_url),
-                's3_upload_url': str(upload_url),
-                'analyst_select': int(runpod_analyst_id) 
+                's3_video_url': download_url,
+                's3_upload_url': upload_url,
+                'analyst_select': int(analyst_id)
             }
         }
         endpoint = f"{self.runpod_url}/process_video"
-        logger.info(f"RunPod Request Payload: {payload}")
-
+        
+        logger.info(f"🚀 RunPod 작업 제출 중... (Analyst: {analyst_id})")
+        
         response = self.session.post(endpoint, json=payload, timeout=30)
+        response.raise_for_status()
+        
+        job_id = response.json()['job_id']
+        logger.info(f"✅ 작업 제출 완료 (Job ID: {job_id})")
+        return job_id
 
-        try:
-            response.raise_for_status()
-        except requests.exceptions.HTTPError as e:
-            logger.error(f"Runpod Error Response: {response.text}")
-            raise e
-
-        return response.json()['job_id']
-    
-    def download_result_from_s3(self, s3_key, original_file_name=None):
-        try:
-            today = datetime.now()
-            relative_path = f"videos/{today.strftime('%Y/%m/%d')}"
-            local_dir = Path(settings.MEDIA_ROOT) / relative_path
-            local_dir.mkdir(parents=True, exist_ok=True)
-
-            if original_file_name:
-                safe_name = Path(original_file_name).name
-                filename = f"processed_{safe_name}"
-            else:
-                filename = f"processed_{int(time.time())}.mp4"
-
-            local_full_path = local_dir / filename
-            
-            logger.info(f"Downloading to {local_full_path}...")
-            self.s3_client.download_file(self.bucket_name, s3_key, str(local_full_path))
-            
-            return f"{relative_path}/{filename}"
-            
-        except Exception as e:
-            logger.error(f"S3 Download Failed: {e}")
-            raise
+    def download_result_from_s3(self, s3_key, original_filename):
+        today = datetime.datetime.now()
+        relative_path = f"videos/{today.strftime('%Y/%m/%d')}"
+        local_dir = Path(settings.MEDIA_ROOT) / relative_path
+        local_dir.mkdir(parents=True, exist_ok=True)
+        
+        safe_name = Path(original_filename).name
+        filename = f"processed_{int(time.time())}_{safe_name}"
+        local_full_path = local_dir / filename
+        
+        logger.info(f"📥 결과 다운로드 시작... ({s3_key} -> {local_full_path})")
+        
+        self.s3_client.download_file(self.bucket_name, s3_key, str(local_full_path))
+        
+        logger.info("✅ 다운로드 완료")
+        return str(relative_path + "/" + filename), str(local_full_path)
 
     def process_and_monitor(self, user_upload_instance, _, db_analyst_id):
         """
@@ -105,27 +133,16 @@ class RunPodClient:
             if processing_code:
                 user_upload_instance.upload_status_code = processing_code
                 user_upload_instance.save()
+
             runpod_analyst_id = self.ANALYST_MAPPING.get(db_analyst_id, 1)
-            
-            local_file_path = user_upload_instance.upload_file.file_path.path
-            file_name = os.path.basename(local_file_path)
-            s3_input_key = f"inputs/{int(time.time())}_{file_name}"
-            
-            logger.info(f"Uploading local file to S3: {local_file_path} -> {s3_input_key}")
-            
-            self.s3_client.upload_file(local_file_path, self.bucket_name, s3_input_key)
-            download_url = f"https://{self.bucket_name}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{s3_input_key}"
 
-            timestamp = int(time.time())
-            output_key = f"outputs/result_{timestamp}.mp4"
-            upload_url = f"https://{self.bucket_name}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{output_key}"
-
-            logger.info(f"S3 Input URL: {download_url}")
-            job_id = self.submit_job(download_url, upload_url, runpod_analyst_id)
-            self._monitor_loop(user_upload_instance, job_id, db_analyst_id, output_key)
+            s3_input_key = self.upload_video_to_s3(user_upload_instance.upload_file.file_path)
+            urls = self.generate_public_urls(s3_input_key)
+            job_id = self.submit_job(urls['download_url'], urls['upload_url'], runpod_analyst_id)
+            self._monitor_loop(user_upload_instance, job_id, db_analyst_id, urls['output_key'])
 
         except Exception as e:
-            logger.error(f"Process Error: {e}")
+            logger.error(f"❌ 프로세스 실패: {e}")
             failed_code = self._get_common_code(23, 'STATUS')
             if failed_code:
                 user_upload_instance.upload_status_code = failed_code
@@ -138,19 +155,20 @@ class RunPodClient:
                 response = self.session.get(f"{self.runpod_url}/status/{job_id}", timeout=15)
                 status_data = response.json()
                 status = status_data.get('status')
+                
+                progress = status_data.get('progress', 0)
+                step = status_data.get('step', '')
+                if step:
+                     logger.info(f"Job Status: {status} | Progress: {progress}% | Step: {step}")
 
                 if status == 'COMPLETED':
-                    logger.info("RunPod Completed! Starting download...")
+                    logger.info("✅ 작업 완료! 결과 다운로드 및 DB 저장 시작")
 
                     original_name = user_upload_instance.upload_file.file_path.name
-                    saved_relative_path = self.download_result_from_s3(output_s3_key, original_name)
+                    saved_rel_path, local_abs_path = self.download_result_from_s3(output_s3_key, original_name)
 
-                    original_file_info = user_upload_instance.upload_file
-                    if os.path.exists(original_file_info.file_path.path):
-                        os.remove(original_file_info.file_path.path)
-                        
-                    original_file_info.file_path = saved_relative_path
-                    original_file_info.save()
+                    user_upload_instance.upload_file.file_path = saved_rel_path
+                    user_upload_instance.save()
                     
                     script_data = status_data.get('output', {}).get('script')
                     if script_data:
@@ -159,7 +177,7 @@ class RunPodClient:
                         
                         SubtitleInfo.objects.create(
                             upload_file=user_upload_instance,
-                            video_file=None,
+                            video_file=None, 
                             subtitle=script_bytes,
                             commentator_code=commentator_code_obj 
                         )
@@ -169,11 +187,10 @@ class RunPodClient:
                         user_upload_instance.upload_status_code = completed_code
                         user_upload_instance.save()
                     
-                    logger.info("Processing Completed & Saved to DB")
                     break
                 
                 elif status == 'FAILED':
-                    logger.error("RunPod Job Failed")
+                    logger.error(f"❌ 작업 실패: {status_data.get('error')}")
                     failed_code = self._get_common_code(23, 'STATUS')
                     if failed_code:
                         user_upload_instance.upload_status_code = failed_code
@@ -183,7 +200,7 @@ class RunPodClient:
                 time.sleep(poll_interval)
             
             except Exception as e:
-                logger.error(f"Monitoring error: {e}")
+                logger.error(f"⚠️ 모니터링 중 에러: {e}")
                 time.sleep(poll_interval)
 
 runpod_client = RunPodClient()
