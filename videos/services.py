@@ -249,25 +249,7 @@ def get_my_videos_context(user_id):
 
     user_videos = UserUploadVideo.objects.filter(
         user=user, use_yn=True
-    ).select_related('upload_file', 'upload_status_code').order_by('-upload_date', '-upload_file_id')
-
-    video_list = []
-    for v in user_videos:
-        sub_info = SubtitleInfo.objects.filter(upload_file=v).select_related('commentator_code').first()
-        commentator = sub_info.commentator_code.common_code_value if sub_info and sub_info.commentator_code else "미지정"
-        
-        status_code = v.upload_status_code.common_code if v.upload_status_code else 20
-        is_processing = (status_code != 22)
-
-        video_list.append({
-            'id': v.upload_file.file_id,
-            'title': v.upload_title,
-            'date': v.upload_date, 
-            'url': v.upload_file.file_path.url,
-            'commentator': commentator,
-            'is_processing': is_processing,
-            'download_count': v.download_count
-        })
+    ).select_related('upload_file', 'upload_status_code').order_by('-upload_date', '-id')
 
     return {
         'user': user,
@@ -276,7 +258,7 @@ def get_my_videos_context(user_id):
         'remaining_bytes': remaining_bytes,
         'storage_display': storage_display,
         'used_percentage': used_percentage,
-        'video_list': video_list,
+        'video_list': user_videos,
         **meta_context
     }
 
