@@ -87,11 +87,9 @@ class RunPodClient:
 
     def submit_job(self, download_url, upload_url, analyst_id):
         payload = {
-            "input": {
-                's3_video_url': download_url,
-                's3_upload_url': upload_url,
-                'analyst_select': int(analyst_id)
-            }
+            's3_video_url': download_url,
+            's3_upload_url': upload_url,
+            'analyst_select': int(analyst_id)
         }
         endpoint = f"{self.runpod_url}/process_video"
         
