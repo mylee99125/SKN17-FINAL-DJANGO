@@ -5,10 +5,8 @@ import json
 import logging
 import os
 import tempfile
-import datetime
 import sys
 from botocore.config import Config
-from pathlib import Path
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from django.conf import settings
@@ -106,6 +104,7 @@ class RunPodClient:
         
         timestamp = int(time.time())
         output_key = f"outputs/result_{timestamp}.mp4"
+        
         upload_url = self.s3_client.generate_presigned_url(
             'put_object',
             Params={
@@ -139,30 +138,7 @@ class RunPodClient:
         logger.info(f"✅ 작업 제출 완료 (Job ID: {job_id})")
         return job_id
 
-    def download_result_from_s3(self, s3_key, original_filename):
-        today = datetime.datetime.now()
-        relative_path = f"videos/{today.strftime('%Y/%m/%d')}"
-        local_dir = Path(settings.MEDIA_ROOT) / relative_path
-        local_dir.mkdir(parents=True, exist_ok=True)
-        
-        safe_name = Path(original_filename).name
-        filename = f"processed_{int(time.time())}_{safe_name}"
-        local_full_path = local_dir / filename
-        
-        logger.info(f"📥 결과 다운로드 시작... ({s3_key} -> {local_full_path})")
-        
-        self.s3_client.download_file(self.bucket_name, s3_key, str(local_full_path))
-        
-        logger.info("✅ 다운로드 완료")
-        return str(relative_path + "/" + filename), str(local_full_path)
-
     def process_and_monitor(self, user_upload_instance, _, db_analyst_id):
-        """
-        [백그라운드 스레드]
-        1. 상태를 '처리중(21)'으로 변경
-        2. S3 업로드 -> RunPod 제출
-        3. 완료 시 상태 '처리완료(22)' 변경 및 자막 저장
-        """
         try:
             self._update_status(user_upload_instance, 21)
             runpod_analyst_id = self.ANALYST_MAPPING.get(db_analyst_id, 1)
@@ -178,7 +154,6 @@ class RunPodClient:
 
     def _monitor_loop(self, user_upload_instance, job_id, db_analyst_id, output_s3_key):
         poll_interval = 5
-
         max_wait_time = 20 * 60 
         start_time = time.time()
 
@@ -194,45 +169,41 @@ class RunPodClient:
                 status_data = response.json()
                 raw_status = status_data.get('status', '').upper()
                 
-                progress = status_data.get('progress', 0)
                 step = status_data.get('step', '')
                 if step:
+                     progress = status_data.get('progress', 0)
                      logger.info(f"Job Status: {raw_status} | Progress: {progress}% | Step: {step}")
 
                 if raw_status in ['COMPLETED', 'SUCCESS']:
-                    logger.info("✅ 작업 완료! 결과 다운로드 시작...")
+                    logger.info("✅ RunPod 작업 완료! DB 업데이트 시작...")
                     
                     try:
-                        original_name = user_upload_instance.upload_file.file_path.name
-                        saved_rel_path = self.download_result_from_s3(output_s3_key, original_name)
-
-                        user_upload_instance.upload_file.file_path = saved_rel_path
-                        user_upload_instance.save()
+                        file_info = user_upload_instance.upload_file
+                        file_info.file_path.name = output_s3_key 
+                        file_info.save()
+                        logger.info(f"💾 영상 경로 연결 완료: {output_s3_key}")
                         
                         output_data = status_data.get('output', {})
                         script_data = output_data.get('script') if isinstance(output_data, dict) else None
 
                         if script_data:
-                            commentator_code_obj = self._get_common_code(db_analyst_id, 'COMMENTATOR')
                             script_bytes = json.dumps(script_data, ensure_ascii=False).encode('utf-8')
                             
-                            SubtitleInfo.objects.create(
-                                upload_file=user_upload_instance,
-                                video_file=None, 
-                                subtitle=script_bytes,
-                                commentator_code=commentator_code_obj 
-                            )
+                            subtitle_info = SubtitleInfo.objects.get(upload_file=user_upload_instance)
+                            subtitle_info.subtitle = script_bytes
+                            subtitle_info.save()
+                            logger.info("💾 자막 데이터 업데이트 완료")
 
                         self._update_status(user_upload_instance, 22)
                         
-                    except Exception as download_error:
-                        logger.error(f"❌ 결과 다운로드/저장 중 치명적 오류: {download_error}")
+                    except Exception as e:
+                        logger.error(f"❌ DB 저장 중 오류 발생: {e}")
                         self._update_status(user_upload_instance, 23)
                     
                     break 
                 
                 elif raw_status == 'FAILED':
-                    logger.error(f"❌ 작업 실패: {status_data.get('error')}")
+                    logger.error(f"❌ RunPod 작업 실패: {status_data.get('error')}")
                     self._update_status(user_upload_instance, 23)
                     break
                 

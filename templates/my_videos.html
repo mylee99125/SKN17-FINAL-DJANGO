@@ -21,7 +21,7 @@
                 {% with status=video.upload_status_code.common_code %}
                 
                 <div class="my-video-card" id="card-{{ video.id }}"
-                    {% if status == '22' %}
+                    {% if status == 22 %}
                         onclick="location.href='{% url 'videos:play_user_video' video.id %}'"
                         style="cursor: pointer;"
                     {% else %}
@@ -31,7 +31,7 @@
                     <div class="mv-thumb-box">
                         <video src="{{ video.upload_file.file_path.url }}" class="base-thumb-video" muted preload="metadata"></video>
 
-                        {% if status == '20' or status == '21' %}
+                        {% if status == 20 or status == 21 %}
                             <div class="status-overlay processing-overlay">
                                 <div class="spinner"></div>
                                 <span class="proc-msg">
@@ -40,7 +40,7 @@
                                 <div class="proc-bar-bg"><div class="proc-bar-fill"></div></div>
                             </div>
 
-                        {% elif status == '23' %}
+                        {% elif status == 23 %}
                             <div class="status-overlay failed-overlay">
                                 <span class="error-text">⚠️ 분석 실패</span>
                                 <button class="action-btn delete" onclick="event.stopPropagation(); openDeleteModal('{{ video.id }}')" title="삭제">
@@ -51,7 +51,7 @@
                                 </button>
                             </div>
 
-                        {% elif status == '22' %}
+                        {% elif status == 22 %}
                             <div class="status-overlay hover-overlay">
                                 <button class="action-btn download" 
                                         onclick="event.stopPropagation(); openDownloadModal(this, '{{ video.id }}', '{{ video.upload_title }}')" 
@@ -72,7 +72,7 @@
                         {% endif %}
                     </div>
 
-                    <div class="mv-info">
+                    <div class="mv-info" style="padding: 15px;">
                         <div class="mv-title">{{ video.upload_title }}</div>
                         <div class="mv-meta">
                             <span class="mv-date">{{ video.upload_date|date:"Y.m.d" }}</span>
@@ -85,7 +85,7 @@
                 </div>
                 {% endwith %}
             {% endfor %}
-            
+
             <div class="my-video-card add-new-card" onclick="openUploadModal()">
                 <div class="add-content">
                     <div class="add-icon-circle">+</div>

@@ -249,7 +249,7 @@ def get_my_videos_context(user_id):
 
     user_videos = UserUploadVideo.objects.filter(
         user=user, use_yn=True
-    ).select_related('upload_file', 'upload_status_code').order_by('-upload_date', '-id')
+    ).select_related('upload_file', 'upload_status_code').order_by('-upload_date', '-pk')
 
     return {
         'user': user,
