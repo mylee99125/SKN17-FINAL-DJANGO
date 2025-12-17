@@ -466,21 +466,32 @@ async function executeDownload() {
         const data = await response.json();
 
         if (response.ok && data.status === 'success') {
+            const fileResponse = await fetch(data.file_url);
+            if (!fileResponse.ok) {
+                throw new Error("파일을 불러오는데 실패했습니다.");
+            }
+
+            const blob = await fileResponse.blob();
+            const url = window.URL.createObjectURL(blob);
+            
             const link = document.createElement('a');
-            link.href = data.file_url;
-            link.download = ''; 
+            link.href = url;
+            link.download = `video_${targetVideoId}.mp4`; 
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             
+            window.URL.revokeObjectURL(url);
+            
             const newRemaining = data.remaining_count;
-            document.getElementById('dl-count-display').innerText = `${newRemaining} / 10`;
+            const countDisplay = document.getElementById('dl-count-display');
+            if(countDisplay) countDisplay.innerText = `${newRemaining} / 10`;
             
             if (currentDownloadBtn) {
                 currentDownloadBtn.setAttribute('data-count', data.current_count);
             }
 
-            btn.innerText = "다운로드 시작됨";
+            btn.innerText = "다운로드 완료";
             
             setTimeout(() => { 
                 closeDownloadModal(); 
