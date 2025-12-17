@@ -9,6 +9,7 @@ import sys
 from botocore.config import Config
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from urllib.parse import urlparse
 from django.conf import settings
 from users.models import CommonCode
 from .models import SubtitleInfo
@@ -184,15 +185,35 @@ class RunPodClient:
                         logger.info(f"💾 영상 경로 연결 완료: {output_s3_key}")
                         
                         output_data = status_data.get('output', {})
-                        script_data = output_data.get('script') if isinstance(output_data, dict) else None
+                        script_url = output_data.get('script') 
 
-                        if script_data:
-                            script_bytes = json.dumps(script_data, ensure_ascii=False).encode('utf-8')
-                            
-                            subtitle_info = SubtitleInfo.objects.get(upload_file=user_upload_instance)
-                            subtitle_info.subtitle = script_bytes
-                            subtitle_info.save()
-                            logger.info("💾 자막 데이터 업데이트 완료")
+                        if script_url:
+                            try:
+                                from urllib.parse import urlparse
+                                parsed_url = urlparse(script_url)
+                                script_s3_key = parsed_url.path.lstrip('/') 
+
+                                logger.info(f"📜 자막 다운로드 시도 (Key: {script_s3_key})")
+                                
+                                s3_obj = self.s3_client.get_object(Bucket=self.bucket_name, Key=script_s3_key)
+                                script_content = s3_obj['Body'].read().decode('utf-8')
+                                json.loads(script_content)
+                                script_bytes = script_content.encode('utf-8')
+                                
+                                commentator_code_obj = self._get_common_code(db_analyst_id, 'COMMENTATOR')
+
+                                subtitle_info, created = SubtitleInfo.objects.update_or_create(
+                                    upload_file=user_upload_instance,
+                                    commentator_code=commentator_code_obj,
+                                    defaults={
+                                        'subtitle': script_bytes,
+                                        'video_file': None
+                                    }
+                                )
+                                logger.info(f"💾 자막 데이터 저장 완료 ({'생성' if created else '수정'})")
+
+                            except Exception as script_error:
+                                logger.error(f"❌ 자막 처리 중 오류 발생 (URL: {script_url}): {script_error}")
 
                         self._update_status(user_upload_instance, 22)
                         
