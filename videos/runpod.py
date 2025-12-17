@@ -193,9 +193,10 @@ class RunPodClient:
                         try:
                             s3_obj = self.s3_client.get_object(Bucket=self.bucket_name, Key=expected_script_key)
                             script_content = s3_obj['Body'].read().decode('utf-8')
-                            
-                            json.loads(script_content)
-                            script_bytes = script_content.encode('utf-8')
+
+                            json_data = json.loads(script_content)
+                            clean_json_str = json.dumps(json_data, ensure_ascii=False)
+                            script_bytes = clean_json_str.encode('utf-8')
                             
                             commentator_code_obj = self._get_common_code(db_analyst_id, 'COMMENTATOR')
 
