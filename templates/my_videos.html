@@ -18,7 +18,7 @@
 
         <div class="my-video-grid">
             {% for video in video_list %}
-                {% with status=video.upload_status_code.common_code %}
+                {% with status=video.upload_status_code.common_code|default:0 %}
                 
                 <div class="my-video-card" id="card-{{ video.id }}"
                     {% if status == 22 %}
@@ -29,13 +29,17 @@
                     {% endif %}>
 
                     <div class="mv-thumb-box">
-                        <video src="{{ video.upload_file.file_path.url }}" class="base-thumb-video" muted preload="metadata"></video>
+                        {% if video.upload_file and video.upload_file.file_path %}
+                            <video src="{{ video.upload_file.file_path.url }}" class="base-thumb-video" muted preload="metadata"></video>
+                        {% else %}
+                            <div class="no-file" style="background:#eee; width:100%; height:100%;"></div>
+                        {% endif %}
 
                         {% if status == 20 or status == 21 %}
                             <div class="status-overlay processing-overlay">
                                 <div class="spinner"></div>
                                 <span class="proc-msg">
-                                    {% if status == '20' %}대기 중..{% else %}분석 중..{% endif %}
+                                    {% if status == 20 %}대기 중..{% else %}분석 중..{% endif %}
                                 </span>
                                 <div class="proc-bar-bg"><div class="proc-bar-fill"></div></div>
                             </div>
