@@ -942,127 +942,131 @@ body.sidebar-open .my-video-container {
 .chat-input-area { padding: 15px; background-color: #252525; border-top: 1px solid #333; flex-shrink: 0; }
 
 .commentator-popup {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 900px;
-    max-width: 95%;
+    position: absolute;  
+    bottom: 75px;        
+    left: 0;
+    right: 0;            
+    width: 100%;      
+    max-width: none;  
+    transform: none;     
+    top: auto;           
     background: #1a1a1a; 
     border-radius: 16px;
-    padding: 40px;
+    padding: 25px 20px; 
     z-index: 1000;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-    color: #fff;
-    border: 1px solid #333;
-    display: none; 
+    box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+    border: 1px solid #444;
+    box-sizing: border-box; 
+    display: none;
 }
 .commentator-popup.show { 
     display: block; 
-    animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+    animation: slideUpPopup 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-@keyframes popUp { 
-    from { transform: translate(-50%, -30%); opacity: 0; } 
-    to { transform: translate(-50%, -50%); opacity: 1; } 
+@keyframes slideUpPopup { 
+    from { transform: translateY(20px); opacity: 0; } 
+    to { transform: translateY(0); opacity: 1; } 
 }
 
 .comm-popup-title {
-    font-size: 24px;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 30px;
+    font-size: 1.1rem; 
+    margin-bottom: 20px;
     color: #fff;
+    text-align: center;
 }
 .comm-card-container {
     display: flex;
     justify-content: space-between;
-    gap: 20px;
-    margin-bottom: 30px;
+    gap: 10px;
+    margin-bottom: 20px;
 }
 .comm-card {
     flex: 1;
+    padding: 15px 10px; 
+    border-radius: 10px;
     background: #2a2a2a;
     border: 2px solid transparent;
-    border-radius: 12px;
-    padding: 25px 20px;
     cursor: pointer;
-    transition: all 0.3s ease;
     text-align: center;
     position: relative;
-    overflow: hidden;
+    transition: all 0.2s;
 }
 .comm-card:hover:not(.disabled) {
     background: #333;
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.4);
-    border-color: #666;
+    transform: translateY(-3px);
 }
 .comm-card.selected {
-    border: 2px solid #E50914; 
+    border-color: #E50914;
     background-color: rgba(229, 9, 20, 0.05);
-    box-shadow: 0 0 15px rgba(229, 9, 20, 0.2);
 }
 .comm-card.selected::after {
     content: "✔";
     position: absolute;
-    top: 10px;
-    right: 15px;
+    top: 5px;
+    right: 5px;
     color: #E50914;
+    font-size: 0.9rem;
     font-weight: 900;
-    font-size: 1.2rem;
 }
-
 .comm-card.disabled {
-    cursor: not-allowed;
-    background-color: rgba(255, 255, 255, 0.05); 
-    border-color: #333;
-    opacity: 0.5; 
+    background-color: rgba(255, 255, 255, 0.05);
+    opacity: 0.5;
     filter: grayscale(100%);
+    cursor: not-allowed;
+    border-color: #333;
 }
 .comm-overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.6); 
+    background: rgba(0, 0, 0, 0.6);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: 0.9rem;
     font-weight: bold;
-    color: #aaa;
-    backdrop-filter: blur(2px); 
+    color: #ccc;
+    border-radius: 8px;
 }
-
 .comm-header {
-    font-size: 1.1rem;
-    font-weight: 800;
-    margin-bottom: 15px;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
     color: #eee;
+    white-space: nowrap; 
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .comm-img-box {
-    width: 100px;
-    height: 100px;
-    margin: 0 auto 15px;
+    width: 60px; 
+    height: 60px;
+    margin: 0 auto 10px;
     border-radius: 50%;
     overflow: hidden;
-    background: #444;
     border: 2px solid #333;
 }
-.comm-img-box img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
 .comm-desc {
-    font-size: 0.85rem;
+    font-size: 0.7rem;
     color: #aaa;
-    line-height: 1.5;
-    word-break: keep-all;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    height: 40px;
+}
+.comm-btn-area {
+    display: flex;
+    gap: 10px;
+}
+.comm-confirm-btn, .comm-cancel-btn {
+    flex: 1;
+    padding: 10px 0;
+    font-size: 0.9rem;
+    border-radius: 8px;
 }
 .comm-notice-text {
-    text-align: center;
+    font-size: 0.75rem;
+    margin-bottom: 15px;
     color: #888;
-    font-size: 0.9rem;
-    margin-bottom: 25px;
 }
 .comm-btn-area {
     display: flex;
@@ -1096,8 +1100,6 @@ body.sidebar-open .my-video-container {
 }
 .commentator-bar-wrapper { 
     position: relative; 
-    height: 60px; 
-    flex-shrink: 0; 
     z-index: 200; 
 }
 .commentator-bar { 
