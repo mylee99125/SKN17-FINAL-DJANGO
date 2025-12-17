@@ -86,7 +86,7 @@ function changeTeam(btnElement, teamCode) {
     const buttons = document.querySelectorAll('.team-list-btn');
     buttons.forEach(btn => btn.classList.remove('selected'));
     btnElement.classList.add('selected');
-    location.href = "?team=" + teamCode;
+    location.href = "/videos/home?team=" + teamCode;
 }
 
 function getCookie(name) {
