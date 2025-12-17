@@ -459,7 +459,7 @@ function moveMyTeamPage(direction) {
 
             data.videos.forEach(video => {
                 const html = `
-                    <div class="video-card-horizontal" onclick="location.href='videos/play/${video.id}/'">
+                    <div class="video-card-horizontal" onclick="location.href='/videos/play/${video.id}/'">
                         <div class="video-thumb">
                             <video src="${video.url}" muted onmouseover="this.play()" onmouseout="this.pause();this.currentTime=0;"></video>
                         </div>
@@ -490,7 +490,7 @@ function loadMoreAllVideos() {
 
                 data.videos.forEach(video => {
                     const html = `
-                        <div class="video-card" onclick="location.href='videos/play/${video.id}/'">
+                        <div class="video-card" onclick="location.href='/videos/play/${video.id}/'">
                             <div class="video-thumb">
                                 <video src="${video.url}" muted onmouseover="this.play()" onmouseout="this.pause();this.currentTime=0;"></video>
                             </div>
