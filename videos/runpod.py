@@ -111,8 +111,7 @@ class RunPodClient:
             'put_object',
             Params={
                 'Bucket': self.bucket_name, 
-                'Key': output_key,
-                'ContentType': 'video/mp4'
+                'Key': output_key
             },
             ExpiresIn=3600
         )
@@ -121,8 +120,7 @@ class RunPodClient:
             'put_object',
             Params={
                 'Bucket': self.bucket_name, 
-                'Key': output_script_key,
-                'ContentType': 'application/json'
+                'Key': output_script_key
             },
             ExpiresIn=3600
         )
@@ -136,19 +134,32 @@ class RunPodClient:
 
     def submit_job(self, download_url, upload_url, script_upload_url, analyst_id):
         payload = {
-            's3_video_url': download_url,
-            's3_upload_url': upload_url,
-            's3_script_url': script_upload_url,
-            'analyst_select': int(analyst_id)
+            "input": {
+                's3_video_url': download_url,
+                's3_upload_url': upload_url,
+                's3_script_url': script_upload_url,
+                'analyst_select': int(analyst_id)
+            }
         }
+        
         endpoint = f"{self.runpod_url}/process_video"
         
         logger.info(f"🚀 RunPod 작업 제출 중... (Analyst: {analyst_id})")
         
-        response = self.session.post(endpoint, json=payload, timeout=30)
-        response.raise_for_status()
+        headers = {
+            "Authorization": f"Bearer {settings.RUNPOD_API_KEY}", 
+            "Content-Type": "application/json"
+        }
         
-        job_id = response.json()['job_id']
+        response = self.session.post(endpoint, json=payload, headers=headers, timeout=30)
+        
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"RunPod Error Response: {response.text}")
+            raise e
+        
+        job_id = response.json()['id']
         logger.info(f"✅ 작업 제출 완료 (Job ID: {job_id})")
         return job_id
 
@@ -159,7 +170,14 @@ class RunPodClient:
 
             s3_input_key = self.upload_video_to_s3(user_upload_instance.upload_file.file_path)
             urls = self.generate_public_urls(s3_input_key)
-            job_id = self.submit_job(urls['download_url'], urls['upload_url'], urls['script_upload_url'], runpod_analyst_id)
+            
+            job_id = self.submit_job(
+                urls['download_url'], 
+                urls['upload_url'], 
+                urls['script_upload_url'], 
+                runpod_analyst_id
+            )
+            
             self._monitor_loop(user_upload_instance, job_id, db_analyst_id, urls['output_key'])
 
         except Exception as e:
@@ -179,7 +197,9 @@ class RunPodClient:
                 break
 
             try:
-                response = self.session.get(f"{self.runpod_url}/status/{job_id}", timeout=15)
+                headers = {"Authorization": f"Bearer {settings.RUNPOD_API_KEY}"}
+                response = self.session.get(f"{self.runpod_url}/status/{job_id}", headers=headers, timeout=15)
+                
                 status_data = response.json()
                 raw_status = status_data.get('status', '').upper()
                 
@@ -204,12 +224,11 @@ class RunPodClient:
                             try:
                                 parsed_url = urlparse(script_url)
                                 script_s3_key = parsed_url.path.lstrip('/') 
-
                                 logger.info(f"📜 자막 다운로드 시도 (Key: {script_s3_key})")
                                 
                                 s3_obj = self.s3_client.get_object(Bucket=self.bucket_name, Key=script_s3_key)
                                 script_content = s3_obj['Body'].read().decode('utf-8')
-                                json.loads(script_content)
+                                json.loads(script_content) # 검증
                                 script_bytes = script_content.encode('utf-8')
                                 
                                 commentator_code_obj = self._get_common_code(db_analyst_id, 'COMMENTATOR')
@@ -226,7 +245,7 @@ class RunPodClient:
 
                             except Exception as script_error:
                                 logger.error(f"❌ 자막 처리 중 오류 발생 (URL: {script_url}): {script_error}")
-
+                        
                         self._update_status(user_upload_instance, 22)
                         
                     except Exception as e:
