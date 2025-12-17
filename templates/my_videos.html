@@ -22,7 +22,7 @@
                 
                 <div class="my-video-card" id="card-{{ video.id }}"
                     {% if status == 22 %}
-                        onclick="location.href='{% url 'videos:play_user_video' video.id %}'"
+                        onclick="location.href='{% url 'videos:play_user_video' video.pk %}'"
                         style="cursor: pointer;"
                     {% else %}
                         style="cursor: default;"
@@ -47,7 +47,7 @@
                         {% elif status == 23 %}
                             <div class="status-overlay failed-overlay">
                                 <span class="error-text">⚠️ 분석 실패</span>
-                                <button class="action-btn delete" onclick="event.stopPropagation(); openDeleteModal('{{ video.id }}')" title="삭제">
+                                <button class="action-btn delete" onclick="event.stopPropagation(); openDeleteModal('{{ video.pk }}')" title="삭제">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polyline points="3 6 5 6 21 6"></polyline>
                                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -58,7 +58,7 @@
                         {% elif status == 22 %}
                             <div class="status-overlay hover-overlay">
                                 <button class="action-btn download" 
-                                        onclick="event.stopPropagation(); openDownloadModal(this, '{{ video.id }}', '{{ video.upload_title }}')" 
+                                        onclick="event.stopPropagation(); openDownloadModal(this, '{{ video.pk }}', '{{ video.upload_title }}', {{ video.download_count|default:0 }})"
                                         title="다운로드">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -66,7 +66,7 @@
                                         <line x1="12" y1="15" x2="12" y2="3"></line>
                                     </svg>
                                 </button>
-                                <button class="action-btn delete" onclick="event.stopPropagation(); openDeleteModal('{{ video.id }}')" title="삭제">
+                                <button class="action-btn delete" onclick="event.stopPropagation(); openDeleteModal('{{ video.pk }}')" title="삭제">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polyline points="3 6 5 6 21 6"></polyline>
                                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -411,13 +411,13 @@ async function submitUploadForm() {
 let targetVideoId = null;
 let currentDownloadBtn = null; 
 
-function openDownloadModal(btnElement, id, title) {
+function openDownloadModal(btnElement, id, title, count) {
     targetVideoId = id;
     currentDownloadBtn = btnElement; 
     
     document.getElementById('dl-video-title').innerText = title;
     
-    const currentCount = parseInt(btnElement.getAttribute('data-count'));
+    const currentCount = parseInt(count) || 0;
     
     const totalLimit = 10;
     const remaining = totalLimit - currentCount;

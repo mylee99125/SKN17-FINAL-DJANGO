@@ -74,7 +74,6 @@ def my_videos(request):
         return redirect('/')
     except Exception as e:
         print("\n" + "="*50)
-        print("🔥 [500 에러 원인 잡았다 요놈] 🔥")
         print(f"에러 메시지: {e}")
         print("상세 위치:")
         traceback.print_exc()
