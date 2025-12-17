@@ -946,7 +946,8 @@ body.sidebar-open .my-video-container {
     bottom: 75px;        
     left: 0;
     right: 0;            
-    width: 100%;      
+    width: 100%; 
+    height: 420px;     
     max-width: none;  
     transform: none;     
     top: auto;           
@@ -990,6 +991,7 @@ body.sidebar-open .my-video-container {
     text-align: center;
     position: relative;
     transition: all 0.2s;
+    height: 200px;
 }
 .comm-card:hover:not(.disabled) {
     background: #333;
@@ -1014,6 +1016,11 @@ body.sidebar-open .my-video-container {
     filter: grayscale(100%);
     cursor: not-allowed;
     border-color: #333;
+}
+.comm-img-box img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
 }
 .comm-overlay {
     position: absolute;
@@ -1049,7 +1056,6 @@ body.sidebar-open .my-video-container {
     line-height: 1.3;
     display: -webkit-box;
     -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
     overflow: hidden;
     height: 40px;
 }
@@ -1067,6 +1073,7 @@ body.sidebar-open .my-video-container {
     font-size: 0.75rem;
     margin-bottom: 15px;
     color: #888;
+    text-align: center;
 }
 .comm-btn-area {
     display: flex;
@@ -1101,6 +1108,7 @@ body.sidebar-open .my-video-container {
 .commentator-bar-wrapper { 
     position: relative; 
     z-index: 200; 
+    height: 60px;
 }
 .commentator-bar { 
     height: 100%; 
