@@ -3,7 +3,7 @@ import json
 import logging
 import threading
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404
 from django.core.serializers.json import DjangoJSONEncoder
@@ -49,6 +49,26 @@ def format_bytes(size):
         size /= power
         n += 1
     return f"{size:.2f} {power_labels[n]}"
+
+def _deduplicate_videos(queryset):
+    queryset = queryset.prefetch_related(
+        'subtitleinfo_set__commentator_code'
+    )
+    video_map = {}
+    for video in queryset:
+        title = video.highlight_title
+        sub_info = video.subtitleinfo_set.first()
+        commentator_name = ""
+        if sub_info and sub_info.commentator_code:
+            commentator_name = sub_info.commentator_code.common_code_value
+
+        if title not in video_map:
+            video_map[title] = video
+        
+        else:
+            if "박찬호" in commentator_name:
+                video_map[title] = video
+    return list(video_map.values())
 
 def _get_video_querysets(target_code, search_query='', sort_option='latest'):
     """(내부함수) 조건에 따른 영상 쿼리셋 생성"""
@@ -101,7 +121,10 @@ def _get_video_querysets(target_code, search_query='', sort_option='latest'):
         else:
             other_qs = other_qs.order_by('-match_date')
 
-    return my_team_qs, other_qs, is_team_korea, current_display_name
+    my_team_list = _deduplicate_videos(my_team_qs)
+    other_list = _deduplicate_videos(other_qs)
+
+    return my_team_list, other_list, is_team_korea, current_display_name
 
 
 # --- [Business Logics] ---
@@ -200,8 +223,29 @@ def get_play_context(user_id, video_id):
             raise PermissionError("TRIAL_EXPIRED") 
 
     video = get_object_or_404(HighlightVideo, video_file_id=video_id)
-    meta_context = get_team_meta(user)
-    
+    siblings = HighlightVideo.objects.filter(
+        highlight_title=video.highlight_title,
+        match_date=video.match_date
+    ).prefetch_related('subtitleinfo_set__commentator_code')
+
+    versions = {}
+    current_commentator = "기본"
+
+    for sib in siblings:
+        sub = sib.subtitleinfo_set.first()
+        if sub and sub.commentator_code:
+            c_name = sub.commentator_code.common_code_value
+            
+            if "박찬호" in c_name: key = "박찬오"
+            elif "이순칠" in c_name: key = "이순칠"
+            elif "김선오" in c_name: key = "김선오"
+            else: key = c_name
+
+            versions[key] = sib.video_file_id
+            
+            if sib.video_file_id == video.video_file_id:
+                current_commentator = key
+
     subtitle_data = "[]"
     try:
         sub_info = SubtitleInfo.objects.filter(video_file_id=video_id).first()
@@ -211,6 +255,7 @@ def get_play_context(user_id, video_id):
     except Exception:
         pass 
 
+    meta_context = get_team_meta(user)
     current_team_code = 'LG'
     if user.favorite_code:
         current_team_code = user.favorite_code.common_code_value.replace('FAVORITE - ', '').replace('FAVORITE-', '').strip().upper()
@@ -221,6 +266,8 @@ def get_play_context(user_id, video_id):
         'subtitle_data': subtitle_data,
         'current_team_code': current_team_code,
         'has_history': has_history,
+        'versions': versions,       
+        'current_commentator': current_commentator,
         **meta_context
     }
 

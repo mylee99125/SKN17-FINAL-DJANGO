@@ -473,7 +473,7 @@ async function executeDownload() {
             const link = document.createElement('a');
             link.href = url;
 
-            const titleElement = document.getElementById('video-title'); 
+            const titleElement = document.getElementById('dl-video-title'); 
             const fileName = titleElement ? titleElement.innerText.trim() + ".mp4" : `video_${targetVideoId}.mp4`;
             link.download = fileName; 
 

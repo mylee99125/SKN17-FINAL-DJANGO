@@ -167,7 +167,8 @@
                     <div class="comm-popup-title">해설위원 선택</div>
 
                     <div class="comm-card-container">
-                        <div class="comm-card selected" onclick="selectCommentator(this, '박찬오')">
+                        <div class="comm-card {% if current_commentator == '박찬호' %}selected{% endif %} {% if not versions.박찬호 %}disabled{% endif %}" 
+                            {% if versions.박찬호 %}onclick="selectCommentator(this, '{{ versions.박찬호 }}')"{% endif %}>
                             <div class="comm-header">박찬오 해설위원</div>
                             <div class="comm-img-box">
                                 <img src="{% static 'images/commentator/park.svg' %}" alt="박찬오">
@@ -176,9 +177,11 @@
                                 한국 야구의 레전드,<br>끝없는 야구 철학!<br>
                                 풍부한 경험담과 열정이 넘치는 TMT 해설
                             </div>
+                            {% if not versions.박찬호 %}<div class="comm-overlay">준비중</div>{% endif %}
                         </div>
 
-                        <div class="comm-card" onclick="selectCommentator(this, '이순칠')">
+                        <div class="comm-card {% if current_commentator == '이순철' %}selected{% endif %} {% if not versions.이순철 %}disabled{% endif %}" 
+                            {% if versions.이순철 %}onclick="selectCommentator(this, '{{ versions.이순철 }}')"{% endif %}>
                             <div class="comm-header">이순칠 해설위원</div>
                             <div class="comm-img-box">
                                 <img src="{% static 'images/commentator/lee.svg' %}" alt="이순칠">
@@ -187,9 +190,11 @@
                                 가감 없는 쓴소리와<br>날카로운 비판,<br>
                                 데이터에 기반한 객관적이고 시원시원한 해설
                             </div>
+                            {% if not versions.이순철 %}<div class="comm-overlay">준비중</div>{% endif %}
                         </div>
 
-                        <div class="comm-card" onclick="selectCommentator(this, '김선오')">
+                        <div class="comm-card {% if current_commentator == '김선오' %}selected{% endif %} {% if not versions.김선오 %}disabled{% endif %}" 
+                            {% if versions.김선오 %}onclick="selectCommentator(this, '{{ versions.김선오 }}')"{% endif %}>
                             <div class="comm-header">김선오 해설위원</div>
                             <div class="comm-img-box">
                                 <img src="{% static 'images/commentator/kim.svg' %}" alt="김선오">
@@ -197,11 +202,17 @@
                             <div class="comm-desc">
                                 메이저리그 경험을 녹여낸 세련되고 부드러운 분석,<br>
                                 디테일한 해설을 제공하는 입문자 맞춤 해설
-                            </div> 
+                            </div>
+                            {% if not versions.김선오 %}<div class="comm-overlay">준비중</div>{% endif %}
                         </div>
                     </div>
+
                     <p class="comm-notice-text">해설위원을 변경할 경우 영상은 자동으로 처음부터 실행됩니다.</p>
-                    <button class="comm-confirm-btn" onclick="confirmCommentator()">선택 완료</button>
+                    
+                    <div class="comm-btn-area">
+                        <button class="comm-cancel-btn" onclick="closeCommPopup()">취소</button>
+                        <button class="comm-confirm-btn" onclick="confirmCommentator()">선택 완료</button>
+                    </div>
                 </div>
                 {% endif %}
             </div>
@@ -249,11 +260,15 @@ function toggleCommentatorList() {
 }
 
 let tempSelectedName = null;
+let targetVideoId = null;
 
-function selectCommentator(cardElement, name) {
-    document.querySelectorAll('.comm-card').forEach(card => card.classList.remove('selected'));
-    cardElement.classList.add('selected');
-    tempSelectedName = name;
+function selectCommentator(element, videoId) {
+    if (element.classList.contains('disabled')) return;
+    const cards = document.querySelectorAll('.comm-card');
+    cards.forEach(card => card.classList.remove('selected'));
+
+    element.classList.add('selected');
+    targetVideoId = videoId;
 }
 
 function confirmCommentator() {
@@ -272,8 +287,7 @@ function confirmCommentator() {
         noticeText.innerText = tempSelectedName + " 해설위원";
     }
 
-    // TODO: 여기서 나중에 AJAX로 영상 데이터 교체 요청
-    // changeVideoSource(tempSelectedName); 
+    window.location.href = `/videos/play/${targetVideoId}/`;
 
     toggleCommentatorList();
 }
