@@ -27,10 +27,7 @@ class RunPodClient:
         s3_config = Config(
             connect_timeout=120,    
             read_timeout=120,       
-            retries={
-                'max_attempts': 10,
-                'mode': 'adaptive' 
-            },
+            retries={'max_attempts': 10, 'mode': 'adaptive'},
             signature_version='s3v4'
         )
         self.s3_client = boto3.client(
@@ -43,11 +40,7 @@ class RunPodClient:
         self.bucket_name = settings.AWS_STORAGE_BUCKET_NAME
         self.runpod_url = settings.RUNPOD_API_URL
         self.session = self._create_resilient_session()
-        self.ANALYST_MAPPING = {
-            17: 3,
-            18: 2,
-            19: 1
-        }
+        self.ANALYST_MAPPING = {17: 3, 18: 2, 19: 1}
 
     def _create_resilient_session(self):
         session = requests.Session()
@@ -77,7 +70,6 @@ class RunPodClient:
             filename = f"video_{int(time.time())}.mp4"
             
         s3_key = f"inputs/{filename}"
-        
         logger.info(f"📤 S3 업로드 시작 (Key: {s3_key})...")
 
         with tempfile.NamedTemporaryFile(delete=True) as tmp:
@@ -85,22 +77,16 @@ class RunPodClient:
                 tmp.write(chunk)
             tmp.flush()
             tmp.seek(0)
-            
             self.s3_client.upload_file(
-                tmp.name,
-                self.bucket_name,
-                s3_key,
+                tmp.name, self.bucket_name, s3_key,
                 ExtraArgs={'ContentType': 'video/mp4'}
             )
-            
         logger.info(f"✅ S3 업로드 완료: s3://{self.bucket_name}/{s3_key}")
         return s3_key
 
     def generate_public_urls(self, input_s3_key):
         download_url = self.s3_client.generate_presigned_url(
-            'get_object',
-            Params={'Bucket': self.bucket_name, 'Key': input_s3_key},
-            ExpiresIn=3600
+            'get_object', Params={'Bucket': self.bucket_name, 'Key': input_s3_key}, ExpiresIn=3600
         )
         
         timestamp = int(time.time())
@@ -108,28 +94,18 @@ class RunPodClient:
         output_script_key = f"outputs/script_{timestamp}.json"
         
         upload_url = self.s3_client.generate_presigned_url(
-            'put_object',
-            Params={
-                'Bucket': self.bucket_name, 
-                'Key': output_key
-            },
-            ExpiresIn=3600
+            'put_object', Params={'Bucket': self.bucket_name, 'Key': output_key}, ExpiresIn=3600
         )
-
         script_upload_url = self.s3_client.generate_presigned_url(
-            'put_object',
-            Params={
-                'Bucket': self.bucket_name, 
-                'Key': output_script_key
-            },
-            ExpiresIn=3600
+            'put_object', Params={'Bucket': self.bucket_name, 'Key': output_script_key}, ExpiresIn=3600
         )
         
         return {
             'download_url': download_url,
             'upload_url': upload_url,
             'script_upload_url': script_upload_url,
-            'output_key': output_key
+            'output_key': output_key,
+            'script_key': output_script_key 
         }
 
     def submit_job(self, download_url, upload_url, script_upload_url, analyst_id):
@@ -141,11 +117,9 @@ class RunPodClient:
         }
         
         endpoint = f"{self.runpod_url}/process_video"
-        
         logger.info(f"🚀 RunPod 작업 제출 중... (Analyst: {analyst_id})")
         
         response = self.session.post(endpoint, json=payload, timeout=30)
-        
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
@@ -171,13 +145,19 @@ class RunPodClient:
                 runpod_analyst_id
             )
             
-            self._monitor_loop(user_upload_instance, job_id, db_analyst_id, urls['output_key'])
+            self._monitor_loop(
+                user_upload_instance, 
+                job_id, 
+                db_analyst_id, 
+                urls['output_key'], 
+                urls['script_key']
+            )
 
         except Exception as e:
             logger.error(f"❌ 프로세스 실패: {e}")
             self._update_status(user_upload_instance, 23)
 
-    def _monitor_loop(self, user_upload_instance, job_id, db_analyst_id, output_s3_key):
+    def _monitor_loop(self, user_upload_instance, job_id, db_analyst_id, output_s3_key, expected_script_key):
         poll_interval = 5
         max_wait_time = 20 * 60 
         start_time = time.time()
@@ -208,36 +188,31 @@ class RunPodClient:
                         file_info.save()
                         logger.info(f"💾 영상 경로 연결 완료: {output_s3_key}")
                         
-                        output_data = status_data.get('output', {})
-                        script_url = output_data.get('script_url') or output_data.get('script')
+                        logger.info(f"📜 자막 파일 강제 조회 시도: {expected_script_key}")
+                        
+                        try:
+                            s3_obj = self.s3_client.get_object(Bucket=self.bucket_name, Key=expected_script_key)
+                            script_content = s3_obj['Body'].read().decode('utf-8')
+                            
+                            json.loads(script_content)
+                            script_bytes = script_content.encode('utf-8')
+                            
+                            commentator_code_obj = self._get_common_code(db_analyst_id, 'COMMENTATOR')
 
-                        if script_url:
-                            try:
-                                parsed_url = urlparse(script_url)
-                                script_s3_key = parsed_url.path.lstrip('/') 
-                                logger.info(f"📜 자막 다운로드 시도 (Key: {script_s3_key})")
-                                
-                                s3_obj = self.s3_client.get_object(Bucket=self.bucket_name, Key=script_s3_key)
-                                script_content = s3_obj['Body'].read().decode('utf-8')
-                                json.loads(script_content) 
-                                script_bytes = script_content.encode('utf-8')
-                                
-                                commentator_code_obj = self._get_common_code(db_analyst_id, 'COMMENTATOR')
+                            subtitle_info, created = SubtitleInfo.objects.update_or_create(
+                                upload_file=user_upload_instance,
+                                commentator_code=commentator_code_obj,
+                                defaults={
+                                    'subtitle': script_bytes,
+                                    'video_file': None
+                                }
+                            )
+                            logger.info(f"💾 자막 데이터 저장 완료 ({'생성' if created else '수정'})")
 
-                                subtitle_info, created = SubtitleInfo.objects.update_or_create(
-                                    upload_file=user_upload_instance,
-                                    commentator_code=commentator_code_obj,
-                                    defaults={
-                                        'subtitle': script_bytes,
-                                        'video_file': None
-                                    }
-                                )
-                                logger.info(f"💾 자막 데이터 저장 완료 ({'생성' if created else '수정'})")
-
-                            except Exception as script_error:
-                                logger.error(f"❌ 자막 처리 중 오류 발생 (URL: {script_url}): {script_error}")
-                        else:
-                            logger.warning(f"⚠️ 결과에 자막 URL이 없습니다. Output Data: {output_data}")
+                        except self.s3_client.exceptions.NoSuchKey:
+                            logger.error(f"❌ 자막 파일이 S3에 생성되지 않았습니다: {expected_script_key}")
+                        except Exception as script_error:
+                            logger.error(f"❌ 자막 처리 중 에러: {script_error}")
                         
                         self._update_status(user_upload_instance, 22)
                         
