@@ -134,12 +134,10 @@ class RunPodClient:
 
     def submit_job(self, download_url, upload_url, script_upload_url, analyst_id):
         payload = {
-            "input": {
-                's3_video_url': download_url,
-                's3_upload_url': upload_url,
-                's3_script_url': script_upload_url,
-                'analyst_select': int(analyst_id)
-            }
+            's3_video_url': download_url,
+            's3_upload_url': upload_url,
+            's3_script_url': script_upload_url,
+            'analyst_select': int(analyst_id)
         }
         
         endpoint = f"{self.runpod_url}/process_video"
@@ -154,7 +152,7 @@ class RunPodClient:
             logger.error(f"RunPod Error Response: {response.text}")
             raise e
         
-        job_id = response.json()['id'] 
+        job_id = response.json().get('job_id') 
         logger.info(f"✅ 작업 제출 완료 (Job ID: {job_id})")
         return job_id
 
@@ -193,7 +191,6 @@ class RunPodClient:
 
             try:
                 response = self.session.get(f"{self.runpod_url}/status/{job_id}", timeout=15)
-                
                 status_data = response.json()
                 raw_status = status_data.get('status', '').upper()
                 
@@ -222,7 +219,7 @@ class RunPodClient:
                                 
                                 s3_obj = self.s3_client.get_object(Bucket=self.bucket_name, Key=script_s3_key)
                                 script_content = s3_obj['Body'].read().decode('utf-8')
-                                json.loads(script_content) # 검증
+                                json.loads(script_content) 
                                 script_bytes = script_content.encode('utf-8')
                                 
                                 commentator_code_obj = self._get_common_code(db_analyst_id, 'COMMENTATOR')
