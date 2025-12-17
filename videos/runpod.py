@@ -146,12 +146,7 @@ class RunPodClient:
         
         logger.info(f"🚀 RunPod 작업 제출 중... (Analyst: {analyst_id})")
         
-        headers = {
-            "Authorization": f"Bearer {settings.RUNPOD_API_KEY}", 
-            "Content-Type": "application/json"
-        }
-        
-        response = self.session.post(endpoint, json=payload, headers=headers, timeout=30)
+        response = self.session.post(endpoint, json=payload, timeout=30)
         
         try:
             response.raise_for_status()
@@ -159,7 +154,7 @@ class RunPodClient:
             logger.error(f"RunPod Error Response: {response.text}")
             raise e
         
-        job_id = response.json()['id']
+        job_id = response.json()['id'] 
         logger.info(f"✅ 작업 제출 완료 (Job ID: {job_id})")
         return job_id
 
@@ -197,8 +192,7 @@ class RunPodClient:
                 break
 
             try:
-                headers = {"Authorization": f"Bearer {settings.RUNPOD_API_KEY}"}
-                response = self.session.get(f"{self.runpod_url}/status/{job_id}", headers=headers, timeout=15)
+                response = self.session.get(f"{self.runpod_url}/status/{job_id}", timeout=15)
                 
                 status_data = response.json()
                 raw_status = status_data.get('status', '').upper()
@@ -245,6 +239,8 @@ class RunPodClient:
 
                             except Exception as script_error:
                                 logger.error(f"❌ 자막 처리 중 오류 발생 (URL: {script_url}): {script_error}")
+                        else:
+                            logger.warning("⚠️ 결과에 자막 URL이 없습니다.")
                         
                         self._update_status(user_upload_instance, 22)
                         
