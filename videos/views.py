@@ -1,4 +1,5 @@
 import json
+import traceback
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
@@ -71,6 +72,14 @@ def my_videos(request):
     except UserInfo.DoesNotExist:
         request.session.flush()
         return redirect('/')
+    except Exception as e:
+        print("\n" + "="*50)
+        print("🔥 [500 에러 원인 잡았다 요놈] 🔥")
+        print(f"에러 메시지: {e}")
+        print("상세 위치:")
+        traceback.print_exc()
+        print("="*50 + "\n")
+        raise e
 
 def upload_video(request):
     user_id = request.session.get('user_id')
