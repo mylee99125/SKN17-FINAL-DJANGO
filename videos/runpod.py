@@ -105,6 +105,7 @@ class RunPodClient:
         
         timestamp = int(time.time())
         output_key = f"outputs/result_{timestamp}.mp4"
+        output_script_key = f"outputs/script_{timestamp}.json"
         
         upload_url = self.s3_client.generate_presigned_url(
             'put_object',
@@ -115,17 +116,29 @@ class RunPodClient:
             },
             ExpiresIn=3600
         )
+
+        script_upload_url = self.s3_client.generate_presigned_url(
+            'put_object',
+            Params={
+                'Bucket': self.bucket_name, 
+                'Key': output_script_key,
+                'ContentType': 'application/json'
+            },
+            ExpiresIn=3600
+        )
         
         return {
             'download_url': download_url,
             'upload_url': upload_url,
+            'script_upload_url': script_upload_url,
             'output_key': output_key
         }
 
-    def submit_job(self, download_url, upload_url, analyst_id):
+    def submit_job(self, download_url, upload_url, script_upload_url, analyst_id):
         payload = {
             's3_video_url': download_url,
             's3_upload_url': upload_url,
+            's3_script_url': script_upload_url,
             'analyst_select': int(analyst_id)
         }
         endpoint = f"{self.runpod_url}/process_video"
@@ -146,7 +159,7 @@ class RunPodClient:
 
             s3_input_key = self.upload_video_to_s3(user_upload_instance.upload_file.file_path)
             urls = self.generate_public_urls(s3_input_key)
-            job_id = self.submit_job(urls['download_url'], urls['upload_url'], runpod_analyst_id)
+            job_id = self.submit_job(urls['download_url'], urls['upload_url'], urls['script_upload_url'], runpod_analyst_id)
             self._monitor_loop(user_upload_instance, job_id, db_analyst_id, urls['output_key'])
 
         except Exception as e:
@@ -176,7 +189,7 @@ class RunPodClient:
                      logger.info(f"Job Status: {raw_status} | Progress: {progress}% | Step: {step}")
 
                 if raw_status in ['COMPLETED', 'SUCCESS']:
-                    logger.info("✅ RunPod 작업 완료! DB 업데이트 시작...")
+                    logger.info("✅ RunPod 작업 완료! 결과 처리 시작...")
                     
                     try:
                         file_info = user_upload_instance.upload_file
@@ -189,7 +202,6 @@ class RunPodClient:
 
                         if script_url:
                             try:
-                                from urllib.parse import urlparse
                                 parsed_url = urlparse(script_url)
                                 script_s3_key = parsed_url.path.lstrip('/') 
 
@@ -218,7 +230,7 @@ class RunPodClient:
                         self._update_status(user_upload_instance, 22)
                         
                     except Exception as e:
-                        logger.error(f"❌ DB 저장 중 오류 발생: {e}")
+                        logger.error(f"❌ DB 저장/처리 중 치명적 오류: {e}")
                         self._update_status(user_upload_instance, 23)
                     
                     break 

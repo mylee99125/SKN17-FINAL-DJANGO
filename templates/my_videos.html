@@ -76,9 +76,6 @@
                         <div class="mv-title">{{ video.upload_title }}</div>
                         <div class="mv-meta">
                             <span class="mv-date">{{ video.upload_date|date:"Y.m.d" }}</span>
-                            {% if status == '22' %}<span class="mv-badge complete">완료</span>
-                            {% elif status == '23' %}<span class="mv-badge failed">실패</span>
-                            {% else %}<span class="mv-badge processing">진행 중</span>{% endif %}
                         </div>
                     </div>
 
