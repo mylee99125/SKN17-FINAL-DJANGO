@@ -192,10 +192,35 @@ class RunPodClient:
                         
                         try:
                             s3_obj = self.s3_client.get_object(Bucket=self.bucket_name, Key=expected_script_key)
-                            script_content = s3_obj['Body'].read().decode('utf-8')
+                            raw_content = s3_obj['Body'].read().decode('utf-8')
+                            raw_data = json.loads(raw_content) 
 
-                            json_data = json.loads(script_content)
-                            clean_json_str = json.dumps(json_data, ensure_ascii=False)
+                            processed_data = []
+
+                            if isinstance(raw_data, list):
+                                for item in raw_data:
+                                    start = round(float(item.get('set_start_sec', 0)), 2)
+                                    end = round(float(item.get('set_end_sec', 0)), 2)
+                                    
+                                    text_parts = []
+                                    if item.get('caster_text'):
+                                        text_parts.append(f"{item['caster_text']}")
+                                    
+                                    if item.get('analyst_text'):
+                                        text_parts.append(f"{item['analyst_text']}")
+                                    
+                                    full_text = " ".join(text_parts)
+
+                                    if full_text.strip():
+                                        processed_data.append({
+                                            "start": start,
+                                            "end": end,
+                                            "text": full_text
+                                        })
+                            else:
+                                logger.warning("⚠️ 원본 자막 데이터가 리스트 형식이 아닙니다.")
+                            
+                            clean_json_str = json.dumps(processed_data, ensure_ascii=False)
                             script_bytes = clean_json_str.encode('utf-8')
                             
                             commentator_code_obj = self._get_common_code(db_analyst_id, 'COMMENTATOR')
@@ -208,7 +233,7 @@ class RunPodClient:
                                     'video_file': None
                                 }
                             )
-                            logger.info(f"💾 자막 데이터 저장 완료 ({'생성' if created else '수정'})")
+                            logger.info(f"💾 자막 데이터 가공 및 저장 완료 ({'생성' if created else '수정'})")
 
                         except self.s3_client.exceptions.NoSuchKey:
                             logger.error(f"❌ 자막 파일이 S3에 생성되지 않았습니다: {expected_script_key}")
