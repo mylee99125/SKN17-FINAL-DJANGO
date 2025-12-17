@@ -209,7 +209,7 @@ class RunPodClient:
                         logger.info(f"💾 영상 경로 연결 완료: {output_s3_key}")
                         
                         output_data = status_data.get('output', {})
-                        script_url = output_data.get('script') 
+                        script_url = output_data.get('script_url') or output_data.get('script')
 
                         if script_url:
                             try:
@@ -237,7 +237,7 @@ class RunPodClient:
                             except Exception as script_error:
                                 logger.error(f"❌ 자막 처리 중 오류 발생 (URL: {script_url}): {script_error}")
                         else:
-                            logger.warning("⚠️ 결과에 자막 URL이 없습니다.")
+                            logger.warning(f"⚠️ 결과에 자막 URL이 없습니다. Output Data: {output_data}")
                         
                         self._update_status(user_upload_instance, 22)
                         
